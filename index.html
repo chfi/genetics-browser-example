@@ -15,6 +15,11 @@
 
         <script language="javascript">
 
+
+         var renderers = { "gwasRenderer": { renderer: PS.gwasRenderer,
+                                             canvasHeight: 250 }
+         };
+
          var factory = function(config) {
              return {
                  features: PS.createSource(
@@ -28,49 +33,32 @@
          var sources = [
              {
                  name: 'Genome',
-                 twoBitURI: 'http://www.biodalliance.org/datasets/GRCm38/mm10.2bit',
+                 twoBitURI: 'https://www.biodalliance.org/datasets/GRCm38/mm10.2bit',
                  desc: 'Mouse reference genome build GRCm38',
                  tier_type: 'sequence',
                  provides_entrypoints: true
              },
              {
-                 "name": "GWAS Catalog",
-                 "desc": "NHGRI GWAS Catalog",
-                 "style": [
-                     {
-                         "type": "default",
-                         "style": {
-                             "glyph": "PLIMSOLL",
-                             "SIZE": "12",
-                             "STROKECOLOR": "black",
-                             "FGCOLOR": "red",
-                             "BUMP": "yes"
-                         }
-                     }
-                 ],
-                 "forceReduction": -1,
-                 /* "bwgURI": "http://ngs.sanger.ac.uk/production/uk10k/dalliance/gwascatalog.bb"*/
-                 "bwgURI": "http://localhost:8080/gwascatalog.bb"
-             },
-             /*{
                  name: "GWAS",
                  renderer: "gwasRenderer",
-                 "forcedReduction": -1,
-
+                 forceReduction: -1,
                  bwgURI: "./gwascatalog.bb",
-                 tier_type: "ipfsFetch",
                  style: [
-                 { type: "default",
-                 style: { glyph: "BOX",
-                 BUMP: "yes",
-                 COLOR1: "blue",
-                 COLOR2: "blue",
-                 COLOR3: "blue",
-                 HEIGHT: "120"
-                 }
-                 }
-                 ]
-             },*/
+                     { type: "default",
+                       style: { glyph: "HISTOGRAM",
+                                MIN: 0,
+                                MAX: 1000,
+                                AUTOMAX: "yes",
+                                STEPS: 500,
+                                HIDEAXISLABEL: "yes",
+                                COLOR1: "red",
+                                COLOR2: "red",
+                                COLOR3: "red",
+                                HEIGHT: 120,
+                       }
+                     }
+                 ],
+             },
              /*{
                  name: 'SNP density',
                  jbURI: "http://test-gn2.genenetwork.org/api_pre1/snp/",
@@ -91,20 +79,21 @@
                      }
                  ],
                  refetchOnZoom: true,
-             },
+             },*/
              {
                  name: 'Genes',
                  desc: 'Gene structures from GENCODE M2',
-                 bwgURI: 'http://www.biodalliance.org/datasets/GRCm38/gencodeM2.bb',
-                 stylesheet_uri: 'http://test-gn2.genenetwork.org/api_pre1/templates/biodalliance/gencode.xml',
+                 bwgURI: 'https://www.biodalliance.org/datasets/GRCm38/gencodeM2.bb',
+                 stylesheet_uri: 'https://test-gn2.genenetwork.org/api_pre1/templates/biodalliance/gencode.xml',
                  collapseSuperGroups: true,
-                 trixURI: 'http://www.biodalliance.org/datasets/GRCm38/gencodeM2.ix'
-             }*/
+                 trixURI: 'https://www.biodalliance.org/datasets/GRCm38/gencodeM2.ix'
+             }
          ];
 
          var config = { wrapRenderer: WrappedRenderer.wrapRenderer,
                         browser: Browser,
-                        tracks: { BDTrack: sources }
+                        tracks: { BDTrack: sources },
+                        renderers: renderers
          };
 
          PS.main(config)();
