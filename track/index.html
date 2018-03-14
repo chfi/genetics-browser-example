@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <body style="margin: 0">
-    <h1>browsing~~</h1>
+    <h1>Genome browser</h1>
 
     <div id="browser"> </div>
 
@@ -15,15 +15,18 @@
         </div>
     </div>
     <div id="view"></div>
+
     <script src="./app.js"></script>
+
     <script>
+
       var config =
       { browserHeight: 400.0,
         padding: { vertical: 50.0, horizontal: 0.0 },
         score: { min: 0.15, max: 0.45, sig: 0.25 },
-        urls: { genes: "./mouse.json",
-                gwas: "./gwas.json",
-                annotations: "./annots_fake.json"
+        urls: { genes:       "./data/mouse.json",
+                gwas:        "./data/gwas.json",
+                annotations: "./data/annots_fake.json"
         }
       };
 
