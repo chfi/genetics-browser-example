@@ -38229,20 +38229,11 @@ module.exports = {
 var Color = require("../Color");
 var Color_Scheme_Clrs = require("../Color.Scheme.Clrs");
 var Control_Applicative = require("../Control.Applicative");
-var Control_Bind = require("../Control.Bind");
-var Control_Monad_Aff = require("../Control.Monad.Aff");
-var Control_Monad_Eff_Exception = require("../Control.Monad.Eff.Exception");
-var Control_Monad_Error_Class = require("../Control.Monad.Error.Class");
 var Control_Semigroupoid = require("../Control.Semigroupoid");
-var Data_Argonaut = require("../Data.Argonaut");
-var Data_Argonaut_Prisms = require("../Data.Argonaut.Prisms");
 var Data_Array = require("../Data.Array");
-var Data_Bifunctor = require("../Data.Bifunctor");
 var Data_BigInt = require("../Data.BigInt");
-var Data_Either = require("../Data.Either");
 var Data_Eq = require("../Data.Eq");
 var Data_EuclideanRing = require("../Data.EuclideanRing");
-var Data_Exists = require("../Data.Exists");
 var Data_Foldable = require("../Data.Foldable");
 var Data_FoldableWithIndex = require("../Data.FoldableWithIndex");
 var Data_Function = require("../Data.Function");
@@ -38251,13 +38242,11 @@ var Data_FunctorWithIndex = require("../Data.FunctorWithIndex");
 var Data_HeytingAlgebra = require("../Data.HeytingAlgebra");
 var Data_Int = require("../Data.Int");
 var Data_Lens = require("../Data.Lens");
-var Data_Lens_Fold = require("../Data.Lens.Fold");
 var Data_Lens_Getter = require("../Data.Lens.Getter");
 var Data_Lens_Internal_Forget = require("../Data.Lens.Internal.Forget");
 var Data_List = require("../Data.List");
 var Data_Map = require("../Data.Map");
 var Data_Maybe = require("../Data.Maybe");
-var Data_Maybe_First = require("../Data.Maybe.First");
 var Data_Monoid = require("../Data.Monoid");
 var Data_Newtype = require("../Data.Newtype");
 var Data_Ord = require("../Data.Ord");
@@ -38268,7 +38257,6 @@ var Data_Semigroup = require("../Data.Semigroup");
 var Data_Semiring = require("../Data.Semiring");
 var Data_Show = require("../Data.Show");
 var Data_Symbol = require("../Data.Symbol");
-var Data_Traversable = require("../Data.Traversable");
 var Data_Tuple = require("../Data.Tuple");
 var Data_Unfoldable = require("../Data.Unfoldable");
 var Data_Unit = require("../Data.Unit");
@@ -38279,8 +38267,6 @@ var Genetics_Browser_Types_Coordinates = require("../Genetics.Browser.Types.Coor
 var Graphics_Canvas = require("../Graphics.Canvas");
 var Graphics_Drawing = require("../Graphics.Drawing");
 var Graphics_Drawing_Font = require("../Graphics.Drawing.Font");
-var Network_HTTP_Affjax = require("../Network.HTTP.Affjax");
-var Network_HTTP_Affjax_Response = require("../Network.HTTP.Affjax.Response");
 var Prelude = require("../Prelude");
 var Type_Equality = require("../Type.Equality");
 var Type_Prelude = require("../Type.Prelude");
@@ -38337,18 +38323,6 @@ var GDrawing = (function () {
     };
     return GDrawing;
 })();
-var Track = (function () {
-    function Track(value0, value1) {
-        this.value0 = value0;
-        this.value1 = value1;
-    };
-    Track.create = function (value0) {
-        return function (value1) {
-            return new Track(value0, value1);
-        };
-    };
-    return Track;
-})();
 var withPixelSegments = function (dictMonoid) {
     return function (cs) {
         return function (cdim) {
@@ -38360,80 +38334,6 @@ var withPixelSegments = function (dictMonoid) {
                 return Data_Function.flip(Data_FoldableWithIndex.foldMapWithIndex(Data_Map.foldableWithIndexMap)(dictMonoid))(Genetics_Browser_Types_Coordinates.scaledSegments(cs)(scale));
             };
         };
-    };
-};
-var scalePoint = function (height) {
-    return function (v) {
-        return function (np) {
-            var y = height * (1 - (Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.newtypeNormalized)(np)).y);
-            var x = (Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.newtypeNormalized)(np)).x * Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(v) + v.value0;
-            return {
-                x: x,
-                y: y
-            };
-        };
-    };
-};
-var rescaleNormBatchGlyphs = function (height) {
-    return function (seg) {
-        return function (v) {
-            var $48 = {};
-            for (var $49 in v) {
-                if ({}.hasOwnProperty.call(v, $49)) {
-                    $48[$49] = v[$49];
-                };
-            };
-            $48.points = Data_Functor.map(Data_Functor.functorArray)(scalePoint(height)(seg))(v.points);
-            return $48;
-        };
-    };
-};
-var renderTrack$prime = function (cs) {
-    return function (cdim) {
-        return function (render1) {
-            return function (segFs) {
-                var segs = function (vw) {
-                    return Genetics_Browser_Types_Coordinates.scaledSegments(cs)({
-                        screenWidth: cdim.width,
-                        viewWidth: Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)(vw)
-                    });
-                };
-                var midStep = render1(cdim)(segFs);
-                return function (bView) {
-                    return midStep(segs(bView));
-                };
-            };
-        };
-    };
-};
-var renderSingle = function (render1) {
-    return function (a) {
-        return {
-            drawing: render1.draw(a),
-            horPos: render1.horPlace(a),
-            verPos: render1.verPlace(a)
-        };
-    };
-};
-var renderBatch = function (render1) {
-    return function (as) {
-        var points = Data_Functor.map(Data_Functor.functorArray)(render1.place)(as);
-        return {
-            drawing: render1.drawing,
-            points: points
-        };
-    };
-};
-var render = function (r) {
-    return function (as) {
-        return Data_Variant.onMatch()(Data_Variant_Internal.variantMatchCons(Data_Variant_Internal.variantMatchCons(Data_Variant_Internal.variantMatchNil)()(Type_Equality.refl))()(Type_Equality.refl))()({
-            batch: function (r1) {
-                return Data_Either.Left.create(renderBatch(r1)(as));
-            },
-            single: function (r1) {
-                return Data_Either.Right.create(Data_Functor.map(Data_Functor.functorArray)(renderSingle(r1))(as));
-            }
-        })(Data_Variant.case_)(r);
     };
 };
 var mkIcon = function (c) {
@@ -38468,24 +38368,6 @@ var zipMapsWith = function (dictOrd) {
         return function (a) {
             return function (b) {
                 return Data_Functor.map(Data_Map.functorMap)(Data_Tuple.uncurry(f))(zipMaps(dictOrd)(a)(b));
-            };
-        };
-    };
-};
-var renderTrack = function (cs) {
-    return function (cdim) {
-        return function (render1) {
-            return function (segFs) {
-                var segs = function (bView) {
-                    return Genetics_Browser_Types_Coordinates.scaledSegments(cs)({
-                        screenWidth: cdim.width,
-                        viewWidth: Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)(bView)
-                    });
-                };
-                var midStep = Data_Functor.map(Data_Map.functorMap)(render1(cdim))(segFs);
-                return function (bView) {
-                    return zipMapsWith(Genetics_Browser_Types.ordChrId)(Data_Function.apply)(midStep)(segs(bView));
-                };
             };
         };
     };
@@ -38539,50 +38421,6 @@ var groupToMap = function (dictMonoid) {
         };
     };
 };
-var groupToChrs = function (dictMonoid) {
-    return function (dictFoldable) {
-        return function (dictApplicative) {
-            return function (g) {
-                var add = function (x) {
-                    return function (v) {
-                        if (v instanceof Data_Maybe.Nothing) {
-                            return Data_Maybe.Just.create(Control_Applicative.pure(dictApplicative)(x));
-                        };
-                        if (v instanceof Data_Maybe.Just) {
-                            return Data_Maybe.Just.create(Data_Semigroup.append(dictMonoid.Semigroup0())(Control_Applicative.pure(dictApplicative)(x))(v.value0));
-                        };
-                        throw new Error("Failed pattern match at Genetics.Browser.Track.Backend line 259, column 9 - line 259, column 40: " + [ x.constructor.name, v.constructor.name ]);
-                    };
-                };
-                return Data_Foldable.foldl(dictFoldable)(function (chrs) {
-                    return function (r) {
-                        return Data_Map.alter(Genetics_Browser_Types.ordChrId)(add(r))(g(r))(chrs);
-                    };
-                })(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)));
-            };
-        };
-    };
-};
-var getData = function (cs) {
-    return function (p) {
-        return function (url) {
-            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Data_Functor.map(Control_Monad_Aff.functorAff)(function (v) {
-                return v.response;
-            })(Network_HTTP_Affjax.get(Network_HTTP_Affjax_Response.responsableJson)(url)))(function (v) {
-                return Data_Maybe.maybe(Control_Monad_Error_Class.throwError(Control_Monad_Aff.monadThrowAff)(Control_Monad_Eff_Exception.error("Error when parsing features from " + url)))(Control_Applicative.pure(Control_Monad_Aff.applicativeAff))(Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(Data_Argonaut_Prisms._Array(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))))(Data_Traversable.traverse(Data_Traversable.traversableArray)(Data_Maybe.applicativeMaybe)(p(cs))));
-            });
-        };
-    };
-};
-var getDataGrouped = function (cs) {
-    return function (p) {
-        return function (url) {
-            return Data_Functor.map(Control_Monad_Aff.functorAff)(groupToChrs(Data_Monoid.monoidArray)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v) {
-                return v.feature.chrId;
-            }))(getData(cs)(p)(url));
-        };
-    };
-};
 var finalizeNormDrawing = function (seg) {
     return function (o) {
         return Data_Variant.onMatch()(Data_Variant_Internal.variantMatchCons(Data_Variant_Internal.variantMatchCons(Data_Variant_Internal.variantMatchNil)()(Type_Equality.refl))()(Type_Equality.refl))()({
@@ -38622,24 +38460,6 @@ var rescaleNormSingleGlyphs = function (height) {
         return Data_Functor.map(Data_Functor.functorArray)(renderNormalized1(height)(seg));
     };
 };
-var renderNormalizedTrack = function (cs) {
-    return function (cdim) {
-        return function (bView) {
-            return function (ngs) {
-                var segs = Genetics_Browser_Types_Coordinates.scaledSegments(cs)({
-                    screenWidth: cdim.width,
-                    viewWidth: Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)(bView)
-                });
-                var renderSeg = function (k) {
-                    return function (seg) {
-                        return Control_Applicative.pure(Control_Applicative.applicativeArray)(Data_Maybe.fromMaybe(Control_Applicative.pure(Data_Either.applicativeEither)([  ]))(Data_Functor.map(Data_Maybe.functorMaybe)(Data_Bifunctor.bimap(Data_Either.bifunctorEither)(rescaleNormBatchGlyphs(cdim.height)(seg))(rescaleNormSingleGlyphs(cdim.height)(seg)))(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(k)(ngs))));
-                    };
-                };
-                return Data_FoldableWithIndex.foldMapWithIndex(Data_Map.foldableWithIndexMap)(Data_Monoid.monoidArray)(renderSeg)(segs);
-            };
-        };
-    };
-};
 var eqLegend = function (dictEq) {
     return function (a) {
         return function (b) {
@@ -38659,10 +38479,10 @@ var trackLegend = function (dictFoldable) {
 var drawVScale = function (vscale) {
     return function (height) {
         var vPad = height / 10.0;
-        var n = Data_Functor.map(Data_Functor.functorArray)(function ($93) {
+        var n = Data_Functor.map(Data_Functor.functorArray)(function ($68) {
             return (function (v) {
                 return v * 0.1;
-            })(Data_Int.toNumber($93));
+            })(Data_Int.toNumber($68));
         })(Data_Array.range(0)(10));
         var hPad = vscale.width / 8.0;
         var x = 7.0 * hPad;
@@ -38692,8 +38512,8 @@ var drawVScale = function (vscale) {
         };
         var ps = Data_Foldable.foldMap(Data_Foldable.foldableArray)(Graphics_Drawing.monoidShape)(function (i) {
             return bar((function () {
-                var $74 = i === 0.0 || i === 1.0;
-                if ($74) {
+                var $48 = i === 0.0 || i === 1.0;
+                if ($48) {
                     return 8.0;
                 };
                 return 3.0;
@@ -38726,6 +38546,29 @@ var drawLegend = function (v) {
         return Data_Foldable.fold(Data_Foldable.foldableArray)(Graphics_Drawing.monoidDrawing)(ds);
     };
 };
+var chrLabelTrack$prime = function (slot) {
+    return function (segs) {
+        var y = slot.offset.y - 0.5 * slot.size.height;
+        var font$prime = Graphics_Drawing_Font.font(Graphics_Drawing_Font.sansSerif)(12)(Data_Monoid.mempty(Graphics_Drawing_Font.monoidFontOptions));
+        var chrText = function (chr) {
+            return Graphics_Drawing.text(font$prime)(0)(0)(Graphics_Drawing.fillColor(Color.black))(Data_Newtype.unwrap(Genetics_Browser_Types.newtypeChrId)(chr));
+        };
+        var label = function (chr) {
+            return function (v) {
+                var point = {
+                    x: slot.offset.x + v.value0 + Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(v) * 0.5,
+                    y: y
+                };
+                var drawing = chrText(chr);
+                return [ {
+                    drawing: drawing,
+                    points: [ point ]
+                } ];
+            };
+        };
+        return new Data_Tuple.Tuple(slot, Data_FoldableWithIndex.foldMapWithIndex(Data_Map.foldableWithIndexMap)(Data_Monoid.monoidArray)(label)(segs));
+    };
+};
 
 // boxesTrack :: Number
 //            -> CoordSys ChrId BigInt
@@ -38751,8 +38594,8 @@ var bumpFeatures = function (dictFoldable) {
                                 return function (other) {
                                     var maxInRadius = function (lr) {
                                         return Data_Maybe.fromMaybe(0.0)(Data_Foldable.maximum(Data_Ord.ordNumber)(dictFoldable)(Data_Functor.map(dictFunctor)(function (g) {
-                                            var $82 = Genetics_Browser_Types_Coordinates.pairsOverlap(Genetics_Browser_Types.ordBp)(g.position)(lr);
-                                            if ($82) {
+                                            var $60 = Genetics_Browser_Types_Coordinates.pairsOverlap(Genetics_Browser_Types.ordBp)(g.position)(lr);
+                                            if ($60) {
                                                 return Data_Lens_Getter.view(f)(g);
                                             };
                                             return 0.0;
@@ -38778,14 +38621,6 @@ var bumpFeatures = function (dictFoldable) {
 };
 var _single = Data_Symbol.SProxy.value;
 var _range = Data_Symbol.SProxy.value;
-var horPlace = function (v) {
-    var f = function (p) {
-        return Data_Newtype.unwrap(Genetics_Browser_Types.newtypeBp)(Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(p)(v.frameSize));
-    };
-    return Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
-        return "range";
-    }))(_range)(Data_Functor.map(Data_Pair.functorPair)(f)(v.position));
-};
 var _point = Data_Symbol.SProxy.value;
 var chrLabelTrack = function (cs) {
     return function (cdim) {
@@ -38818,13 +38653,20 @@ var browser = function (cs) {
                 return function (ui) {
                     return function (renderers) {
                         return function (inputTracks) {
+                            var segmentPixels = function (vw) {
+                                return Data_Functor.map(Data_Map.functorMap)(Genetics_Browser_Types_Coordinates.aroundPair(Data_Ring.ringNumber)(-12.0))(Genetics_Browser_Types_Coordinates.scaledSegments(cs)({
+                                    screenWidth: trackDim.width,
+                                    viewWidth: Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)(vw)
+                                }));
+                            };
                             var tracks = (function () {
-                                var gwasT = renderTrack$prime(cs)(trackDim)(renderers.gwas)(inputTracks.gwas);
-                                var annotT = renderTrack$prime(cs)(trackDim)(renderers.annotations)(inputTracks.annotations);
+                                var gwasT = renderers.gwas(trackDim)(inputTracks.gwas);
+                                var annotT = renderers.annotations(trackDim)(inputTracks.annotations);
                                 return function (v) {
+                                    var segs = segmentPixels(v);
                                     return {
-                                        gwas: gwasT(v),
-                                        annotations: annotT(v)
+                                        gwas: gwasT(segs),
+                                        annotations: annotT(segs)
                                     };
                                 };
                             })();
@@ -38840,8 +38682,8 @@ var browser = function (cs) {
                                 var f = function (v1) {
                                     return Graphics_Drawing.translate(v1.point.x)(v1.point.y)(v1.drawing(Data_Unit.unit));
                                 };
-                                return function ($94) {
-                                    return Data_Foldable.foldMap(Data_Foldable.foldableArray)(Graphics_Drawing.monoidDrawing)(f)(withPixelSegments(Data_Monoid.monoidArray)(cs)(trackDim)(v)($94));
+                                return function ($69) {
+                                    return Data_Foldable.foldMap(Data_Foldable.foldableArray)(Graphics_Drawing.monoidDrawing)(f)(withPixelSegments(Data_Monoid.monoidArray)(cs)(trackDim)(v)($69));
                                 };
                             };
                             var drawInSlot = function (v) {
@@ -38881,38 +38723,26 @@ module.exports = {
     GRect: GRect,
     GMany: GMany,
     GDrawing: GDrawing,
-    horPlace: horPlace,
-    renderSingle: renderSingle,
-    renderBatch: renderBatch,
-    render: render,
     horRulerTrack: horRulerTrack,
     chrLabelTrack: chrLabelTrack,
+    "chrLabelTrack'": chrLabelTrack$prime,
     bumpFeatures: bumpFeatures,
-    groupToChrs: groupToChrs,
     drawVScale: drawVScale,
     mkIcon: mkIcon,
     drawLegendItem: drawLegendItem,
     drawLegend: drawLegend,
     groupToMap: groupToMap,
-    getData: getData,
-    getDataGrouped: getDataGrouped,
     eqLegend: eqLegend,
     trackLegend: trackLegend,
-    Track: Track,
     horPlaceOnSegment: horPlaceOnSegment,
     finalizeNormDrawing: finalizeNormDrawing,
     renderNormalized1: renderNormalized1,
-    scalePoint: scalePoint,
-    rescaleNormBatchGlyphs: rescaleNormBatchGlyphs,
     rescaleNormSingleGlyphs: rescaleNormSingleGlyphs,
     withPixelSegments: withPixelSegments,
-    renderNormalizedTrack: renderNormalizedTrack,
-    renderTrack: renderTrack,
-    "renderTrack'": renderTrack$prime,
     browser: browser
 };
 
-},{"../Color":5,"../Color.Scheme.Clrs":3,"../Control.Applicative":8,"../Control.Bind":14,"../Control.Monad.Aff":26,"../Control.Monad.Eff.Exception":36,"../Control.Monad.Error.Class":47,"../Control.Semigroupoid":74,"../Data.Argonaut":107,"../Data.Argonaut.Prisms":105,"../Data.Array":112,"../Data.Bifunctor":120,"../Data.BigInt":122,"../Data.Either":134,"../Data.Eq":137,"../Data.EuclideanRing":139,"../Data.Exists":140,"../Data.Foldable":144,"../Data.FoldableWithIndex":145,"../Data.Function":159,"../Data.Functor":165,"../Data.FunctorWithIndex":167,"../Data.HeytingAlgebra":173,"../Data.Int":178,"../Data.Lens":209,"../Data.Lens.Fold":182,"../Data.Lens.Getter":183,"../Data.Lens.Internal.Forget":188,"../Data.List":214,"../Data.Map":215,"../Data.Maybe":218,"../Data.Maybe.First":216,"../Data.Monoid":227,"../Data.Newtype":229,"../Data.Ord":236,"../Data.Pair":238,"../Data.Record":251,"../Data.Ring":253,"../Data.Semigroup":257,"../Data.Semiring":259,"../Data.Show":262,"../Data.Symbol":274,"../Data.Traversable":279,"../Data.Tuple":281,"../Data.Unfoldable":283,"../Data.Unit":285,"../Data.Variant":288,"../Data.Variant.Internal":287,"../Genetics.Browser.Types":300,"../Genetics.Browser.Types.Coordinates":299,"../Graphics.Canvas":306,"../Graphics.Drawing":308,"../Graphics.Drawing.Font":307,"../Network.HTTP.Affjax":314,"../Network.HTTP.Affjax.Response":312,"../Prelude":322,"../Type.Equality":331,"../Type.Prelude":332}],293:[function(require,module,exports){
+},{"../Color":5,"../Color.Scheme.Clrs":3,"../Control.Applicative":8,"../Control.Semigroupoid":74,"../Data.Array":112,"../Data.BigInt":122,"../Data.Eq":137,"../Data.EuclideanRing":139,"../Data.Foldable":144,"../Data.FoldableWithIndex":145,"../Data.Function":159,"../Data.Functor":165,"../Data.FunctorWithIndex":167,"../Data.HeytingAlgebra":173,"../Data.Int":178,"../Data.Lens":209,"../Data.Lens.Getter":183,"../Data.Lens.Internal.Forget":188,"../Data.List":214,"../Data.Map":215,"../Data.Maybe":218,"../Data.Monoid":227,"../Data.Newtype":229,"../Data.Ord":236,"../Data.Pair":238,"../Data.Record":251,"../Data.Ring":253,"../Data.Semigroup":257,"../Data.Semiring":259,"../Data.Show":262,"../Data.Symbol":274,"../Data.Tuple":281,"../Data.Unfoldable":283,"../Data.Unit":285,"../Data.Variant":288,"../Data.Variant.Internal":287,"../Genetics.Browser.Types":300,"../Genetics.Browser.Types.Coordinates":299,"../Graphics.Canvas":306,"../Graphics.Drawing":308,"../Graphics.Drawing.Font":307,"../Prelude":322,"../Type.Equality":331,"../Type.Prelude":332}],293:[function(require,module,exports){
 // Generated by purs version 0.11.7
 "use strict";
 var Control_Applicative = require("../Control.Applicative");
@@ -39133,7 +38963,6 @@ module.exports = {
 };
 
 },{"../Control.Applicative":8,"../Control.Apply":10,"../Control.Bind":14,"../Control.Category":15,"../Control.Coroutine":18,"../Control.Coroutine.Aff":17,"../Control.Monad.Aff":26,"../Control.Monad.Aff.AVar":22,"../Control.Monad.Eff.Exception":36,"../Control.Monad.Error.Class":47,"../Control.Monad.Except":49,"../Control.Semigroupoid":74,"../Data.Array":112,"../Data.BigInt":122,"../Data.Either":134,"../Data.Foldable":144,"../Data.Foreign":155,"../Data.Function":159,"../Data.Functor":165,"../Data.Int":178,"../Data.List.NonEmpty":212,"../Data.List.Types":213,"../Data.Maybe":218,"../Data.Monoid":227,"../Data.Newtype":229,"../Data.Semigroup":257,"../Data.String":273,"../Data.Symbol":274,"../Data.Traversable":279,"../Data.Unit":285,"../Data.Validation.Semigroup":286,"../Debug.Trace":291,"../Genetics.Browser.Types":300,"../Network.HTTP.Affjax":314,"../Network.HTTP.Affjax.Response":312,"../Prelude":322,"../Simple.JSON":323,"../Type.Row":334,"../Unsafe.Coerce":336}],294:[function(require,module,exports){
-// Generated by purs version 0.11.7
 "use strict";
 var Color = require("../Color");
 var Color_Scheme_Clrs = require("../Color.Scheme.Clrs");
@@ -39152,7 +38981,6 @@ var Data_Array = require("../Data.Array");
 var Data_BigInt = require("../Data.BigInt");
 var Data_Eq = require("../Data.Eq");
 var Data_EuclideanRing = require("../Data.EuclideanRing");
-var Data_Exists = require("../Data.Exists");
 var Data_Filterable = require("../Data.Filterable");
 var Data_Foldable = require("../Data.Foldable");
 var Data_Function = require("../Data.Function");
@@ -39162,7 +38990,6 @@ var Data_Lens_Fold = require("../Data.Lens.Fold");
 var Data_Lens_Getter = require("../Data.Lens.Getter");
 var Data_Lens_Index = require("../Data.Lens.Index");
 var Data_Lens_Internal_Forget = require("../Data.Lens.Internal.Forget");
-var Data_List = require("../Data.List");
 var Data_List_Types = require("../Data.List.Types");
 var Data_Map = require("../Data.Map");
 var Data_Maybe = require("../Data.Maybe");
@@ -39181,7 +39008,6 @@ var Data_Traversable = require("../Data.Traversable");
 var Data_Tuple = require("../Data.Tuple");
 var Data_Unit = require("../Data.Unit");
 var Data_Variant = require("../Data.Variant");
-var Data_Variant_Internal = require("../Data.Variant.Internal");
 var Genetics_Browser_Track_Backend = require("../Genetics.Browser.Track.Backend");
 var Genetics_Browser_Track_Bed = require("../Genetics.Browser.Track.Bed");
 var Genetics_Browser_Types = require("../Genetics.Browser.Types");
@@ -39193,24 +39019,8 @@ var $$Math = require("../Math");
 var Network_HTTP_Affjax = require("../Network.HTTP.Affjax");
 var Network_HTTP_Affjax_Response = require("../Network.HTTP.Affjax.Response");
 var Prelude = require("../Prelude");
-var Type_Equality = require("../Type.Equality");
-var Unsafe_Coerce = require("../Unsafe.Coerce");
-var scoreVerPlace = function (s) {
-    return function (x) {
-        return Genetics_Browser_Types_Coordinates.Normalized((x.feature.score - s.min) / (s.max - s.min));
-    };
-};
-var pointRenderer = function (s) {
-    return function (draw) {
-        return Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
-            return "single";
-        }))(Genetics_Browser_Track_Backend._single)({
-            horPlace: Genetics_Browser_Track_Backend.horPlace,
-            verPlace: scoreVerPlace(s),
-            draw: draw
-        });
-    };
-};
+
+//---------- new renderers~~~~~~~~~
 var placeScored = function (v) {
     return function (v1) {
         var y = Genetics_Browser_Types_Coordinates.Normalized((v1.feature.score - v.min) / (v.max - v.min));
@@ -39221,38 +39031,23 @@ var placeScored = function (v) {
         };
     };
 };
-var gwasDraw = function (color) {
-    var c = Graphics_Drawing.circle(0.0)(0.0)(2.2);
-    var fill = Graphics_Drawing.filled(Graphics_Drawing.fillColor(color))(c);
-    var out = Graphics_Drawing.outlined(Graphics_Drawing.outlineColor(color))(c);
-    return Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(out)(fill);
-};
-var gwasGlyphTest = function (point) {
-    return {
-        drawing: function (v) {
-            return gwasDraw(Color_Scheme_Clrs.navy);
-        },
-        width: 1,
-        point: point
-    };
-};
 var gemmaJSONParse = function (cs) {
     return function (j) {
         return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(j)(Data_Argonaut_Prisms._Object(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))))(function (v) {
-            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.ChrId)(Data_Lens_Fold.previewOn(v)(function ($117) {
-                return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("chr")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($117));
+            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.ChrId)(Data_Lens_Fold.previewOn(v)(function ($106) {
+                return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("chr")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($106));
             })))(function (v1) {
-                return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.Bp)(Data_Lens_Fold.previewOn(v)(function ($118) {
-                    return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("ps")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($118));
+                return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.Bp)(Data_Lens_Fold.previewOn(v)(function ($107) {
+                    return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("ps")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($107));
                 })))(function (v2) {
-                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($119) {
-                        return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("af")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($119));
+                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($108) {
+                        return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("af")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($108));
                     }))(function (v3) {
-                        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($120) {
-                            return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("rs")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($120));
+                        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($109) {
+                            return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("rs")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($109));
                         }))(function (v4) {
-                            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(function ($121) {
-                                return Genetics_Browser_Types.Bp(Data_BigInt.toNumber(Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)($121)));
+                            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(function ($110) {
+                                return Genetics_Browser_Types.Bp(Data_BigInt.toNumber(Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)($110)));
                             })(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(v1)(Data_Lens_Getter.view(Genetics_Browser_Types_Coordinates._Segments(Data_Lens_Internal_Forget.strongForget))(cs))))(function (v5) {
                                 return Control_Applicative.pure(Data_Maybe.applicativeMaybe)({
                                     position: new Data_Pair.Pair(v2, v2),
@@ -39282,7 +39077,7 @@ var fetchJsonChunks = function (url) {
         if (v1 instanceof Data_Maybe.Just) {
             return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Genetics_Browser_Track_Bed.chunkProducer(512)(v1.value0));
         };
-        throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 155, column 3 - line 157, column 43: " + [ v1.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 150, column 3 - line 152, column 43: " + [ v1.constructor.name ]);
     });
 };
 var fetchJSON = function (p) {
@@ -39302,15 +39097,15 @@ var fetchJSON = function (p) {
                 if (v2 instanceof Data_Maybe.Just) {
                     return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(v2.value0);
                 };
-                throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 202, column 16 - line 204, column 27: " + [ v2.constructor.name ]);
+                throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 197, column 16 - line 199, column 27: " + [ v2.constructor.name ]);
             };
-            throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 200, column 3 - line 204, column 27: " + [ v1.constructor.name ]);
+            throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 195, column 3 - line 199, column 27: " + [ v1.constructor.name ]);
         });
     };
 };
 var getGWAS = function (cs) {
     return function (url) {
-        return Data_Functor.map(Control_Monad_Aff.functorAff)(Genetics_Browser_Track_Backend.groupToChrs(Data_Monoid.monoidArray)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v) {
+        return Data_Functor.map(Control_Monad_Aff.functorAff)(Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v) {
             return v.feature.chrId;
         }))(fetchJSON(gemmaJSONParse(cs))(url));
     };
@@ -39318,14 +39113,17 @@ var getGWAS = function (cs) {
 var featureProd = function (url) {
     return function (parse) {
         return Control_Bind.bind(Control_Monad_Aff.bindAff)(fetchJsonChunks(url))(function (v) {
-            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Control_Coroutine.transformProducer(Control_Monad_Aff.monadRecAff)(Control_Monad_Aff.parallelAff)(v)(Control_Coroutine.transform(Control_Monad_Aff.monadAff)(function ($122) {
-                return Genetics_Browser_Track_Backend.groupToChrs(Data_Monoid.monoidArray)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v1) {
+            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Control_Coroutine.transformProducer(Control_Monad_Aff.monadRecAff)(Control_Monad_Aff.parallelAff)(v)(Control_Coroutine.transform(Control_Monad_Aff.monadAff)(function ($111) {
+                return Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v1) {
                     return v1.feature.chrId;
-                })(Data_Filterable.filterMap(Data_Filterable.filterableArray)(parse)($122));
+                })(Data_Filterable.filterMap(Data_Filterable.filterableArray)(parse)($111));
             })));
         });
     };
 };
+
+// TODO bundle up all the producers into one function on a record of URLs
+//      to a record of producers (maprecord? applyrecord?)
 var produceGWAS = function (cs) {
     return function (url) {
         return featureProd(url)(gemmaJSONParse(cs));
@@ -39355,8 +39153,8 @@ var renderGWAS = function (verscale) {
                 return function (radius$prime) {
                     return function (pt) {
                         var covers = function (v) {
-                            var $74 = dist(v.value1)(pt) <= 2.2 + radius$prime;
-                            if ($74) {
+                            var $70 = dist(v.value1)(pt) <= 2.2 + radius$prime;
+                            if ($70) {
                                 return new Data_Maybe.Just(v.value0);
                             };
                             return Data_Maybe.Nothing.value;
@@ -39400,11 +39198,11 @@ var renderGWAS = function (verscale) {
 };
 var bedToFeature = function (cs) {
     return function (pl) {
-        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(cs)(function ($123) {
-            return Genetics_Browser_Types_Coordinates._Segments(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Index.ix(Data_Lens_Index.indexMap(Genetics_Browser_Types.ordChrId))(pl.chrom)(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))($123));
+        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(cs)(function ($112) {
+            return Genetics_Browser_Types_Coordinates._Segments(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Index.ix(Data_Lens_Index.indexMap(Genetics_Browser_Types.ordChrId))(pl.chrom)(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))($112));
         }))(function (v) {
-            var toBp = function ($124) {
-                return Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(Data_BigInt.toNumber($124));
+            var toBp = function ($113) {
+                return Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(Data_BigInt.toNumber($113));
             };
             var thickRange = Data_Functor.map(Data_Pair.functorPair)(toBp)(new Data_Pair.Pair(pl.thickStart, pl.thickEnd));
             var position = Data_Functor.map(Data_Pair.functorPair)(toBp)(new Data_Pair.Pair(pl.chromStart, pl.chromEnd));
@@ -39432,7 +39230,7 @@ var getGenes = function (cs) {
     return function (url) {
         return Control_Bind.bind(Control_Monad_Aff.bindAff)(Genetics_Browser_Track_Bed.fetchBed(url))(function (v) {
             var fs = Data_Filterable.filterMap(Data_Filterable.filterableArray)(bedToFeature(cs))(v);
-            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Genetics_Browser_Track_Backend.groupToChrs(Data_Monoid.monoidArray)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v1) {
+            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v1) {
                 return v1.feature.chrId;
             })(fs));
         });
@@ -39441,10 +39239,10 @@ var getGenes = function (cs) {
 var produceGenes = function (cs) {
     return function (url) {
         return Control_Bind.bind(Control_Monad_Aff.bindAff)(Genetics_Browser_Track_Bed.fetchForeignChunks(url))(function (v) {
-            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Control_Coroutine.transformProducer(Control_Monad_Aff.monadRecAff)(Control_Monad_Aff.parallelAff)(v)(Control_Coroutine.composeTransformers(Control_Monad_Aff.monadRecAff)(Control_Monad_Aff.parallelAff)(Genetics_Browser_Track_Bed.parsedLineTransformer)(Control_Coroutine.transform(Control_Monad_Aff.monadAff)(function ($125) {
-                return Genetics_Browser_Track_Backend.groupToChrs(Data_Monoid.monoidArray)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v1) {
+            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Control_Coroutine.transformProducer(Control_Monad_Aff.monadRecAff)(Control_Monad_Aff.parallelAff)(v)(Control_Coroutine.composeTransformers(Control_Monad_Aff.monadRecAff)(Control_Monad_Aff.parallelAff)(Genetics_Browser_Track_Bed.parsedLineTransformer)(Control_Coroutine.transform(Control_Monad_Aff.monadAff)(function ($114) {
+                return Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v1) {
                     return v1.feature.chrId;
-                })(Data_Filterable.filterMap(Data_Filterable.filterableArray)(bedToFeature(cs))($125));
+                })(Data_Filterable.filterMap(Data_Filterable.filterableArray)(bedToFeature(cs))($114));
             }))));
         });
     };
@@ -39470,8 +39268,8 @@ var bedDraw = function (gene) {
             return Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(Graphics_Drawing.outlined(Data_Semigroup.append(Graphics_Drawing.semigroupOutlineStyle)(Graphics_Drawing.outlineColor(Color_Scheme_X11.darkgrey))(Graphics_Drawing.lineWidth(1.0)))(s))(Graphics_Drawing.filled(Graphics_Drawing.fillColor(Color_Scheme_X11.lightgrey))(s));
         };
         var drawing = (function () {
-            var $89 = width < 1;
-            if ($89) {
+            var $85 = width < 1;
+            if ($85) {
                 return Data_Monoid.mempty(Data_Monoid.monoidFn(Graphics_Drawing.monoidDrawing));
             };
             return function (v) {
@@ -39484,42 +39282,28 @@ var bedDraw = function (gene) {
         };
     });
 };
-var geneRenderer = Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
-    return "single";
-}))(Genetics_Browser_Track_Backend._single)({
-    draw: bedDraw,
-    horPlace: Genetics_Browser_Track_Backend.horPlace,
-    verPlace: Data_Function["const"](0.1)
-});
-var batchPointRenderer = function (s) {
-    return function (drawing) {
-        var lhs = Data_Variant.onMatch()(Data_Variant_Internal.variantMatchCons(Data_Variant_Internal.variantMatchCons(Data_Variant_Internal.variantMatchNil)()(Type_Equality.refl))()(Type_Equality.refl))()({
-            point: function (x) {
-                return x;
-            },
-            range: function (v) {
-                return v.value0;
-            }
-        })(Data_Variant.case_);
-        var place = function (f) {
-            var v = scoreVerPlace(s)(f);
-            var v1 = lhs(Genetics_Browser_Track_Backend.horPlace(f));
-            return {
-                x: v1,
-                y: v
-            };
+var geneRenderer = (function () {
+    var horPlace = function (v) {
+        var f = function (p) {
+            return Data_Newtype.unwrap(Genetics_Browser_Types.newtypeBp)(Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(p)(v.frameSize));
         };
         return Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
-            return "batch";
-        }))(Genetics_Browser_Track_Backend._batch)({
-            drawing: drawing,
-            place: place
-        });
+            return "range";
+        }))(Genetics_Browser_Track_Backend._range)(Data_Functor.map(Data_Pair.functorPair)(f)(v.position));
     };
-};
+    return Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
+        return "single";
+    }))(Genetics_Browser_Track_Backend._single)({
+        draw: bedDraw,
+        horPlace: horPlace,
+        verPlace: Data_Function["const"](0.1)
+    });
+})();
+
+// TODO Configgable Annotation -> LegendEntry function (somehow?!)
 var annotLegendEntry = function (a) {
-    var $97 = Data_String.length(a.feature.name) % 2 === 0;
-    if ($97) {
+    var $91 = Data_String.length(a.feature.name) % 2 === 0;
+    if ($91) {
         return Genetics_Browser_Track_Backend.mkIcon(Color_Scheme_Clrs.blue)("even name");
     };
     return Genetics_Browser_Track_Backend.mkIcon(Color_Scheme_Clrs.red)("odd name");
@@ -39582,26 +39366,26 @@ var renderAnnot = function (verscale) {
 var annotJSONParse = function (cs) {
     return function (j) {
         return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(j)(Data_Argonaut_Prisms._Object(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))))(function (v) {
-            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($126) {
-                return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene stable ID")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($126));
+            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($115) {
+                return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene stable ID")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($115));
             }))(function (v1) {
-                return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($127) {
-                    return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene description")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($127));
+                return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($116) {
+                    return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene description")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($116));
                 }))(function (v2) {
-                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($128) {
-                        return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene name")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($128));
+                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($117) {
+                        return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene name")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($117));
                     }))(function (v3) {
-                        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.Bp)(Data_Lens_Fold.previewOn(v)(function ($129) {
-                            return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene start (bp)")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($129));
+                        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.Bp)(Data_Lens_Fold.previewOn(v)(function ($118) {
+                            return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene start (bp)")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($118));
                         })))(function (v4) {
-                            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.Bp)(Data_Lens_Fold.previewOn(v)(function ($130) {
-                                return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene end (bp)")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($130));
+                            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.Bp)(Data_Lens_Fold.previewOn(v)(function ($119) {
+                                return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene end (bp)")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($119));
                             })))(function (v5) {
-                                return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.ChrId)(Data_Lens_Fold.previewOn(v)(function ($131) {
-                                    return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("ChrId")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($131));
+                                return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.ChrId)(Data_Lens_Fold.previewOn(v)(function ($120) {
+                                    return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("ChrId")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($120));
                                 })))(function (v6) {
-                                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(function ($132) {
-                                        return Genetics_Browser_Types.Bp(Data_BigInt.toNumber(Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)($132)));
+                                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(function ($121) {
+                                        return Genetics_Browser_Types.Bp(Data_BigInt.toNumber(Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)($121)));
                                     })(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(v6)(Data_Lens_Getter.view(Genetics_Browser_Types_Coordinates._Segments(Data_Lens_Internal_Forget.strongForget))(cs))))(function (v7) {
                                         return Control_Applicative.pure(Data_Maybe.applicativeMaybe)({
                                             position: new Data_Pair.Pair(v4, v5),
@@ -39630,7 +39414,7 @@ var fetchAnnotJSON = function (cs) {
 };
 var getAnnotations = function (cs) {
     return function (url) {
-        return Data_Functor.map(Control_Monad_Aff.functorAff)(Genetics_Browser_Track_Backend.groupToChrs(Data_Monoid.monoidArray)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v) {
+        return Data_Functor.map(Control_Monad_Aff.functorAff)(Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v) {
             return v.feature.chrId;
         }))(fetchAnnotJSON(cs)(url));
     };
@@ -39638,21 +39422,6 @@ var getAnnotations = function (cs) {
 var produceAnnots = function (cs) {
     return function (url) {
         return featureProd(url)(annotJSONParse(cs));
-    };
-};
-var annotDraw = function (an) {
-    var text$prime = Graphics_Drawing.text(Graphics_Drawing_Font.font(Graphics_Drawing_Font.sansSerif)(12)(Data_Monoid.mempty(Graphics_Drawing_Font.monoidFontOptions)))(7.5)(2.5)(Graphics_Drawing.fillColor(Color.black))(an.feature.name);
-    var lg = annotLegendEntry(an);
-    return Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
-        return "point";
-    }))(Genetics_Browser_Track_Backend._point)(Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(lg.icon)(text$prime));
-};
-var demoTracks = function (vs) {
-    return function (v) {
-        var mkGwas = Genetics_Browser_Track_Backend.Track.create(batchPointRenderer(vs)(gwasDraw(Color_Scheme_Clrs.navy)));
-        var mkGenes = Genetics_Browser_Track_Backend.Track.create(geneRenderer);
-        var mkAnnots = Genetics_Browser_Track_Backend.Track.create(pointRenderer(vs)(annotDraw));
-        return Data_List.fromFoldable(Data_Foldable.foldableArray)(Data_Filterable.filtered(Data_Filterable.filterableArray)([ Data_Functor.map(Data_Maybe.functorMaybe)(Data_Functor.map(Data_Functor.functorFn)(Data_Exists.mkExists)(mkGwas))(v.gwas), Data_Functor.map(Data_Maybe.functorMaybe)(Data_Functor.map(Data_Functor.functorFn)(Data_Exists.mkExists)(mkAnnots))(v.annotations), Data_Functor.map(Data_Maybe.functorMaybe)(Data_Functor.map(Data_Functor.functorFn)(Data_Exists.mkExists)(mkGenes))(v.genes) ]));
     };
 };
 module.exports = {
@@ -39666,27 +39435,20 @@ module.exports = {
     produceGWAS: produceGWAS,
     produceAnnots: produceAnnots,
     fetchJSON: fetchJSON,
-    gwasDraw: gwasDraw,
-    scoreVerPlace: scoreVerPlace,
     gemmaJSONParse: gemmaJSONParse,
     annotJSONParse: annotJSONParse,
     fetchAnnotJSON: fetchAnnotJSON,
     getGWAS: getGWAS,
     getAnnotations: getAnnotations,
-    pointRenderer: pointRenderer,
-    batchPointRenderer: batchPointRenderer,
     annotLegendEntry: annotLegendEntry,
     annotLegendTest: annotLegendTest,
-    annotDraw: annotDraw,
-    demoTracks: demoTracks,
-    gwasGlyphTest: gwasGlyphTest,
     placeScored: placeScored,
     dist: dist,
     renderGWAS: renderGWAS,
     renderAnnot: renderAnnot
 };
 
-},{"../Color":5,"../Color.Scheme.Clrs":3,"../Color.Scheme.X11":4,"../Control.Applicative":8,"../Control.Bind":14,"../Control.Category":15,"../Control.Coroutine":18,"../Control.Monad.Aff":26,"../Control.Monad.Eff.Exception":36,"../Control.Monad.Error.Class":47,"../Control.Semigroupoid":74,"../Data.Argonaut":107,"../Data.Argonaut.Prisms":105,"../Data.Array":112,"../Data.BigInt":122,"../Data.Eq":137,"../Data.EuclideanRing":139,"../Data.Exists":140,"../Data.Filterable":142,"../Data.Foldable":144,"../Data.Function":159,"../Data.Functor":165,"../Data.Lens":209,"../Data.Lens.Fold":182,"../Data.Lens.Getter":183,"../Data.Lens.Index":185,"../Data.Lens.Internal.Forget":188,"../Data.List":214,"../Data.List.Types":213,"../Data.Map":215,"../Data.Maybe":218,"../Data.Maybe.First":216,"../Data.Monoid":227,"../Data.Newtype":229,"../Data.Ord":236,"../Data.Pair":238,"../Data.Profunctor.Strong":245,"../Data.Ring":253,"../Data.Semigroup":257,"../Data.Semiring":259,"../Data.String":273,"../Data.Symbol":274,"../Data.Traversable":279,"../Data.Tuple":281,"../Data.Unit":285,"../Data.Variant":288,"../Data.Variant.Internal":287,"../Genetics.Browser.Track.Backend":292,"../Genetics.Browser.Track.Bed":293,"../Genetics.Browser.Types":300,"../Genetics.Browser.Types.Coordinates":299,"../Graphics.Canvas":306,"../Graphics.Drawing":308,"../Graphics.Drawing.Font":307,"../Math":310,"../Network.HTTP.Affjax":314,"../Network.HTTP.Affjax.Response":312,"../Prelude":322,"../Type.Equality":331,"../Unsafe.Coerce":336}],295:[function(require,module,exports){
+},{"../Color":5,"../Color.Scheme.Clrs":3,"../Color.Scheme.X11":4,"../Control.Applicative":8,"../Control.Bind":14,"../Control.Category":15,"../Control.Coroutine":18,"../Control.Monad.Aff":26,"../Control.Monad.Eff.Exception":36,"../Control.Monad.Error.Class":47,"../Control.Semigroupoid":74,"../Data.Argonaut":107,"../Data.Argonaut.Prisms":105,"../Data.Array":112,"../Data.BigInt":122,"../Data.Eq":137,"../Data.EuclideanRing":139,"../Data.Filterable":142,"../Data.Foldable":144,"../Data.Function":159,"../Data.Functor":165,"../Data.Lens":209,"../Data.Lens.Fold":182,"../Data.Lens.Getter":183,"../Data.Lens.Index":185,"../Data.Lens.Internal.Forget":188,"../Data.List.Types":213,"../Data.Map":215,"../Data.Maybe":218,"../Data.Maybe.First":216,"../Data.Monoid":227,"../Data.Newtype":229,"../Data.Ord":236,"../Data.Pair":238,"../Data.Profunctor.Strong":245,"../Data.Ring":253,"../Data.Semigroup":257,"../Data.Semiring":259,"../Data.String":273,"../Data.Symbol":274,"../Data.Traversable":279,"../Data.Tuple":281,"../Data.Unit":285,"../Data.Variant":288,"../Genetics.Browser.Track.Backend":292,"../Genetics.Browser.Track.Bed":293,"../Genetics.Browser.Types":300,"../Genetics.Browser.Types.Coordinates":299,"../Graphics.Canvas":306,"../Graphics.Drawing":308,"../Graphics.Drawing.Font":307,"../Math":310,"../Network.HTTP.Affjax":314,"../Network.HTTP.Affjax.Response":312,"../Prelude":322}],295:[function(require,module,exports){
 "use strict";
 
 exports.createCanvas = function(size) {
@@ -39784,6 +39546,15 @@ exports.scrollCanvas = function(backCanvas) {
     };
 };
 
+exports.scrollCanvasA = function(canvas) {
+    return function() {
+        var backCanvas = document.createElement('canvas');
+        backCanvas.width  = canvas.width;
+        backCanvas.height = canvas.height;
+        return exports.scrollCanvas(backCanvas)(canvas);
+    };
+};
+
 
 
 exports.canvasDragImpl = function(canvas) {
@@ -39863,9 +39634,7 @@ var Data_Lens_Internal_Forget = require("../Data.Lens.Internal.Forget");
 var Data_Lens_Iso = require("../Data.Lens.Iso");
 var Data_Lens_Iso_Newtype = require("../Data.Lens.Iso.Newtype");
 var Data_Lens_Record = require("../Data.Lens.Record");
-var Data_Map = require("../Data.Map");
 var Data_Maybe = require("../Data.Maybe");
-var Data_Monoid = require("../Data.Monoid");
 var Data_Newtype = require("../Data.Newtype");
 var Data_Nullable = require("../Data.Nullable");
 var Data_Ring = require("../Data.Ring");
@@ -39878,8 +39647,6 @@ var Data_Traversable = require("../Data.Traversable");
 var Data_Tuple = require("../Data.Tuple");
 var Data_Unit = require("../Data.Unit");
 var Genetics_Browser_Track_Backend = require("../Genetics.Browser.Track.Backend");
-var Genetics_Browser_Track_Demo = require("../Genetics.Browser.Track.Demo");
-var Genetics_Browser_Types = require("../Genetics.Browser.Types");
 var Genetics_Browser_Types_Coordinates = require("../Genetics.Browser.Types.Coordinates");
 var Graphics_Canvas = require("../Graphics.Canvas");
 var Graphics_Drawing = require("../Graphics.Drawing");
@@ -39986,7 +39753,7 @@ var glyphBufferSize = {
     width: 100.0,
     height: 100.0
 };
-var renderBatchGlyphs = function (v) {
+var renderGlyphs = function (v) {
     return function (v1) {
         return function __do() {
             var v2 = Graphics_Canvas.getContext2D(v.glyphBuffer)();
@@ -40049,7 +39816,7 @@ var canvasDrag = function (f) {
                         y: 0
                     })(Data_Nullable.toMaybe(v.total))));
                 };
-                throw new Error("Failed pattern match at Genetics.Browser.Track.UI.Canvas line 148, column 36 - line 150, column 73: " + [ v1.constructor.name ]);
+                throw new Error("Failed pattern match at Genetics.Browser.Track.UI.Canvas line 154, column 36 - line 156, column 73: " + [ v1.constructor.name ]);
             };
         };
         return $foreign.canvasDragImpl(el)(toEither(f));
@@ -40070,7 +39837,7 @@ var dragScroll = function (v) {
                     y: 0
                 });
             };
-            throw new Error("Failed pattern match at Genetics.Browser.Track.UI.Canvas line 160, column 13 - line 162, column 86: " + [ v1.constructor.name ]);
+            throw new Error("Failed pattern match at Genetics.Browser.Track.UI.Canvas line 166, column 13 - line 168, column 86: " + [ v1.constructor.name ]);
         };
         return canvasDrag(f)(v.overlay);
     };
@@ -40151,15 +39918,15 @@ var setTrackCanvasSize = function (dim) {
         return function __do() {
             setBufferedCanvasSize(dim)(v.canvas)();
             return TrackCanvas((function () {
-                var $142 = {};
-                for (var $143 in v) {
-                    if ({}.hasOwnProperty.call(v, $143)) {
-                        $142[$143] = v[$143];
+                var $136 = {};
+                for (var $137 in v) {
+                    if ({}.hasOwnProperty.call(v, $137)) {
+                        $136[$137] = v[$137];
                     };
                 };
-                $142.width = dim.width;
-                $142.height = dim.height;
-                return $142;
+                $136.width = dim.width;
+                $136.height = dim.height;
+                return $136;
             })());
         };
     };
@@ -40171,20 +39938,20 @@ var setBrowserCanvasSize = function (dim) {
             var v1 = setTrackCanvasSize(trackDim)(v.track)();
             var v2 = Graphics_Canvas.setCanvasDimensions(dim)(v.overlay)();
             return BrowserCanvas((function () {
-                var $148 = {};
-                for (var $149 in v) {
-                    if ({}.hasOwnProperty.call(v, $149)) {
-                        $148[$149] = v[$149];
+                var $142 = {};
+                for (var $143 in v) {
+                    if ({}.hasOwnProperty.call(v, $143)) {
+                        $142[$143] = v[$143];
                     };
                 };
-                $148.dimensions = dim;
-                $148.track = v1;
-                return $148;
+                $142.dimensions = dim;
+                $142.track = v1;
+                return $142;
             })());
         };
     };
 };
-var renderBrowser$prime = function (d) {
+var renderBrowser = function (d) {
     return function (v) {
         return function (offset) {
             return function (ui) {
@@ -40209,12 +39976,11 @@ var renderBrowser$prime = function (d) {
                             x: -offset,
                             y: 0
                         })(bfr)))(function () {
-                            var gwasTrack = Data_Foldable.foldMap(Data_Map.foldableMap)(Data_Monoid.monoidArray)(function (v2) {
-                                return v2.drawings;
-                            })(ui.tracks.gwas);
-                            return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Data_Foldable.for_(Control_Monad_Aff.applicativeAff)(Data_Foldable.foldableArray)(gwasTrack)(function (t) {
-                                return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(renderBatchGlyphs(v.track)(t)))(function () {
-                                    return Control_Monad_Aff.delay(d);
+                            return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Data_Foldable.for_(Control_Monad_Aff.applicativeAff)(Data_Foldable.foldableArray)([ ui.tracks.gwas.drawings, ui.tracks.annotations.drawings ])(function (t) {
+                                return Data_Foldable.for_(Control_Monad_Aff.applicativeAff)(Data_Foldable.foldableArray)(t)(function (s) {
+                                    return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(renderGlyphs(v.track)(s)))(function () {
+                                        return Control_Monad_Aff.delay(d);
+                                    });
                                 });
                             }))(function () {
                                 return Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
@@ -40230,65 +39996,16 @@ var renderBrowser$prime = function (d) {
         };
     };
 };
-var renderBrowser$prime$prime = function (d) {
-    return function (v) {
-        return function (offset) {
-            return function (ui) {
-                var bfr = (Data_Newtype.unwrap(newtypeTrackCanvas)(v.track)).canvas;
-                var cnv = (Data_Newtype.unwrap(newtypeBufferedCanvas)(bfr)).front;
-                return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(Graphics_Canvas.getContext2D(cnv)))(function (v1) {
-                    return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
-                        var v2 = Graphics_Canvas.getCanvasDimensions(cnv)();
-                        var v3 = Graphics_Canvas.setFillStyle(backgroundColor)(v1)();
-                        translateBuffer({
-                            x: 0,
-                            y: 0
-                        })(bfr)();
-                        return Data_Functor["void"](Control_Monad_Eff.functorEff)(Graphics_Canvas.fillRect(v1)({
-                            x: 0.0,
-                            y: 0.0,
-                            w: v2.width,
-                            h: v2.height
-                        }))();
-                    }))(function () {
-                        return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(translateBuffer({
-                            x: -offset,
-                            y: 0
-                        })(bfr)))(function () {
-                            return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Data_Foldable.for_(Control_Monad_Aff.applicativeAff)(Data_Foldable.foldableArray)(ui.tracks.gwas.drawings)(function (t) {
-                                return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(renderBatchGlyphs(v.track)(t)))(function () {
-                                    return Control_Monad_Aff.delay(d);
-                                });
-                            }))(function () {
-                                return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Data_Foldable.for_(Control_Monad_Aff.applicativeAff)(Data_Foldable.foldableArray)(ui.tracks.annotations.drawings)(function (t) {
-                                    return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(renderBatchGlyphs(v.track)(t)))(function () {
-                                        return Control_Monad_Aff.delay(d);
-                                    });
-                                }))(function () {
-                                    return Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
-                                        var v2 = Graphics_Canvas.getContext2D(v.overlay)();
-                                        Graphics_Drawing.render(v2)(ui.fixedUI)();
-                                        return Graphics_Drawing.render(v1)(ui.relativeUI)();
-                                    });
-                                });
-                            });
-                        });
-                    });
-                });
-            };
-        };
-    };
-};
 var _Track = function (dictStrong) {
-    return function ($175) {
+    return function ($158) {
         return Data_Lens_Iso_Newtype._Newtype(newtypeBrowserCanvas)(newtypeBrowserCanvas)(dictStrong.Profunctor0())(Data_Lens_Record.prop(new Data_Symbol.IsSymbol(function () {
             return "track";
-        }))()()(Data_Symbol.SProxy.value)(dictStrong)($175));
+        }))()()(Data_Symbol.SProxy.value)(dictStrong)($158));
     };
 };
 var trackDimensions = function (bc) {
-    var t = Data_Lens_Getter.viewOn(bc)(function ($176) {
-        return _Track(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Iso_Newtype._Newtype(newtypeTrackCanvas)(newtypeTrackCanvas)(Data_Lens_Internal_Forget.profunctorForget)($176));
+    var t = Data_Lens_Getter.viewOn(bc)(function ($159) {
+        return _Track(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Iso_Newtype._Newtype(newtypeTrackCanvas)(newtypeTrackCanvas)(Data_Lens_Internal_Forget.profunctorForget)($159));
     });
     return {
         width: t.width,
@@ -40306,8 +40023,8 @@ var setCanvasZIndex = function (ce) {
         return setCanvasStyle(ce)("z-index")(Data_Show.show(Data_Show.showInt)(i));
     };
 };
-var setCanvasStyles = function ($177) {
-    return setElementStyles(Data_Lens_Getter.view(_Element(Data_Lens_Internal_Forget.profunctorForget))($177));
+var setCanvasStyles = function ($160) {
+    return setElementStyles(Data_Lens_Getter.view(_Element(Data_Lens_Internal_Forget.profunctorForget))($160));
 };
 var setCanvasPosition = function (v) {
     return function (ce) {
@@ -40379,9 +40096,8 @@ module.exports = {
     browserCanvas: browserCanvas,
     browserOnClick: browserOnClick,
     trackViewScale: trackViewScale,
-    renderBatchGlyphs: renderBatchGlyphs,
-    "renderBrowser'": renderBrowser$prime,
-    "renderBrowser''": renderBrowser$prime$prime,
+    renderGlyphs: renderGlyphs,
+    renderBrowser: renderBrowser,
     flipTrack: flipTrack,
     blankTrack: blankTrack,
     renderTrack: renderTrack,
@@ -40397,12 +40113,13 @@ module.exports = {
     setCanvasTranslation: $foreign.setCanvasTranslation,
     canvasClickImpl: $foreign.canvasClickImpl,
     scrollCanvas: $foreign.scrollCanvas,
+    scrollCanvasA: $foreign.scrollCanvasA,
     canvasDragImpl: $foreign.canvasDragImpl,
     canvasWheelCBImpl: $foreign.canvasWheelCBImpl,
     debugBrowserCanvas: $foreign.debugBrowserCanvas
 };
 
-},{"../Control.Applicative":8,"../Control.Bind":14,"../Control.Monad.Aff":26,"../Control.Monad.Eff":46,"../Control.Monad.Eff.Class":31,"../Control.Monad.Eff.Console":33,"../Control.Monad.Eff.Uncurried":42,"../Control.Semigroupoid":74,"../DOM.Node.Types":88,"../Data.Either":134,"../Data.EuclideanRing":139,"../Data.Foldable":144,"../Data.Function":159,"../Data.Functor":165,"../Data.Lens":209,"../Data.Lens.Getter":183,"../Data.Lens.Internal.Forget":188,"../Data.Lens.Iso":198,"../Data.Lens.Iso.Newtype":197,"../Data.Lens.Record":205,"../Data.Map":215,"../Data.Maybe":218,"../Data.Monoid":227,"../Data.Newtype":229,"../Data.Nullable":232,"../Data.Ring":253,"../Data.Semigroup":257,"../Data.Semiring":259,"../Data.Show":262,"../Data.Symbol":274,"../Data.Time.Duration":275,"../Data.Traversable":279,"../Data.Tuple":281,"../Data.Unit":285,"../Genetics.Browser.Track.Backend":292,"../Genetics.Browser.Track.Demo":294,"../Genetics.Browser.Types":300,"../Genetics.Browser.Types.Coordinates":299,"../Graphics.Canvas":306,"../Graphics.Drawing":308,"../Prelude":322,"../Unsafe.Coerce":336,"./foreign":295}],297:[function(require,module,exports){
+},{"../Control.Applicative":8,"../Control.Bind":14,"../Control.Monad.Aff":26,"../Control.Monad.Eff":46,"../Control.Monad.Eff.Class":31,"../Control.Monad.Eff.Console":33,"../Control.Monad.Eff.Uncurried":42,"../Control.Semigroupoid":74,"../DOM.Node.Types":88,"../Data.Either":134,"../Data.EuclideanRing":139,"../Data.Foldable":144,"../Data.Function":159,"../Data.Functor":165,"../Data.Lens":209,"../Data.Lens.Getter":183,"../Data.Lens.Internal.Forget":188,"../Data.Lens.Iso":198,"../Data.Lens.Iso.Newtype":197,"../Data.Lens.Record":205,"../Data.Maybe":218,"../Data.Newtype":229,"../Data.Nullable":232,"../Data.Ring":253,"../Data.Semigroup":257,"../Data.Semiring":259,"../Data.Show":262,"../Data.Symbol":274,"../Data.Time.Duration":275,"../Data.Traversable":279,"../Data.Tuple":281,"../Data.Unit":285,"../Genetics.Browser.Track.Backend":292,"../Genetics.Browser.Types.Coordinates":299,"../Graphics.Canvas":306,"../Graphics.Drawing":308,"../Prelude":322,"../Unsafe.Coerce":336,"./foreign":295}],297:[function(require,module,exports){
 "use strict";
 
 exports.buttonEvent = function(id) {
@@ -40524,10 +40241,10 @@ exports.setDebugDivPoint = function(p) {
 };
 
 },{}],298:[function(require,module,exports){
+// Generated by purs version 0.11.7
 "use strict";
 var $foreign = require("./foreign");
 var Color = require("../Color");
-var Color_Scheme_Clrs = require("../Color.Scheme.Clrs");
 var Control_Applicative = require("../Control.Applicative");
 var Control_Apply = require("../Control.Apply");
 var Control_Bind = require("../Control.Bind");
@@ -40539,7 +40256,6 @@ var Control_Monad_Eff = require("../Control.Monad.Eff");
 var Control_Monad_Eff_Class = require("../Control.Monad.Eff.Class");
 var Control_Monad_Eff_Console = require("../Control.Monad.Eff.Console");
 var Control_Monad_Eff_Exception = require("../Control.Monad.Eff.Exception");
-var Control_Monad_Eff_Random = require("../Control.Monad.Eff.Random");
 var Control_Monad_Rec_Class = require("../Control.Monad.Rec.Class");
 var Control_Semigroupoid = require("../Control.Semigroupoid");
 var DOM_Classy_ParentNode = require("../DOM.Classy.ParentNode");
@@ -40561,8 +40277,6 @@ var Data_Lens_Getter = require("../Data.Lens.Getter");
 var Data_Lens_Internal_Forget = require("../Data.Lens.Internal.Forget");
 var Data_Lens_Internal_Re = require("../Data.Lens.Internal.Re");
 var Data_Lens_Iso = require("../Data.Lens.Iso");
-var Data_Lens_Iso_Newtype = require("../Data.Lens.Iso.Newtype");
-var Data_List = require("../Data.List");
 var Data_List_Types = require("../Data.List.Types");
 var Data_Map = require("../Data.Map");
 var Data_Maybe = require("../Data.Maybe");
@@ -40630,7 +40344,7 @@ var updateViewFold = function (uv) {
         if (uv instanceof ModView) {
             return Data_Newtype.over(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(Genetics_Browser_Types_Coordinates.CoordSysView)(uv.value0)(iv);
         };
-        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 93, column 24 - line 96, column 41: " + [ uv.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 87, column 24 - line 90, column 41: " + [ uv.constructor.name ]);
     };
 };
 var snpInfoHTML = function (v) {
@@ -40646,7 +40360,7 @@ var snpInfoHTML$prime = function (assocAnnot) {
             if (v instanceof Data_Maybe.Just) {
                 return "<p>Annotation: " + (Data_Show.show(Data_Show.showString)(v.value0.feature.name) + "</p>");
             };
-            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 392, column 23 - line 396, column 1: " + [ v.constructor.name ]);
+            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 325, column 23 - line 329, column 1: " + [ v.constructor.name ]);
         })();
     };
 };
@@ -40662,8 +40376,6 @@ var showUpdateView = new Data_Show.Show(function (v) {
     };
     return "(ModView)";
 });
-
-// TODO idk if this instance makes sense??? whatevs
 var semigroupUpdateView = new Data_Semigroup.Semigroup(function (v) {
     return function (v1) {
         if (v instanceof ScrollView && v1 instanceof ScrollView) {
@@ -40675,61 +40387,7 @@ var semigroupUpdateView = new Data_Semigroup.Semigroup(function (v) {
         return v1;
     };
 });
-
-/**
- * 
- * renderLoop :: CoordSys _ _
- *            -> { tracks     :: Pair BigInt -> List (Array RenderedTrack)
- *               , relativeUI :: Pair BigInt -> Drawing
- *               , fixedUI :: Drawing }
- *            -> BrowserCanvas
- *            -> UIState _
- *            -> Aff _ Unit
- * renderLoop cSys browser canvas state = forever do
- * 
- *   _ <- takeVar state.viewReady
- * 
- *   csView <- readVar state.view
- *   -- if there's a rendering fiber running, we kill it
- *   traverse_ (killFiber (error "Resetting renderer"))
- *     =<< tryTakeVar state.renderFiber
- * 
- *   let uiScale = trackViewScale canvas csView
- * 
- *   -- if the view scale is unchanged, use the cached glyphs
- *   tracks' <- do
- *     cache <- AVar.tryTakeVar state.cachedTracks
- *     case cache of
- *       Just ct
- *         | ct.cachedScale == uiScale -> do
- *             AVar.putVar ct state.cachedTracks
- *             pure ct.glyphs
- *       _ -> do
- *         let cachedScale = uiScale
- *             glyphs = browser.tracks (unwrap csView)
- * 
- *         AVar.putVar {cachedScale, glyphs} state.cachedTracks
- *         pure glyphs
- * 
- *   -- fork a new renderFiber
- * 
- *   let (Pair offset _) = pixelsView uiScale csView
- * 
- *       relativeUI = browser.relativeUI (unwrap csView)
- *       fixedUI = browser.fixedUI
- * 
- *       ui ::  { tracks     :: List (Array RenderedTrack)
- *              , relativeUI :: Drawing
- *              , fixedUI :: Drawing }
- *       ui = { tracks: tracks'
- *            , relativeUI, fixedUI }
- * 
- *   renderFiber <- forkAff
- *                  $ renderBrowser (wrap 3.0) canvas offset ui
- * 
- *   putVar renderFiber state.renderFiber
- */
-var renderLoop$prime = function (cSys) {
+var renderLoop = function (cSys) {
     return function (browser) {
         return function (canvas) {
             return function (state) {
@@ -40758,7 +40416,7 @@ var renderLoop$prime = function (cSys) {
                                             };
                                         };
                                     })(state.lastOverlaps))(function () {
-                                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(Genetics_Browser_Track_UI_Canvas["renderBrowser''"](Data_Newtype.wrap(Data_Time_Duration.newtypeMilliseconds)(2.0))(canvas)(v2.value0)(ui)))(function (v4) {
+                                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(Genetics_Browser_Track_UI_Canvas.renderBrowser(Data_Newtype.wrap(Data_Time_Duration.newtypeMilliseconds)(2.0))(canvas)(v2.value0)(ui)))(function (v4) {
                                             return Control_Monad_Aff_AVar.putVar(v4)(state.renderFiber);
                                         });
                                     });
@@ -40786,8 +40444,8 @@ var printSNPInfo = function (fs) {
         return Data_Foldable.for_(Control_Monad_Eff.applicativeEff)(Data_Foldable.foldableArray)(Data_Array.take(5)(fs))(showSnp)();
     };
 };
-var mouseChrSizes = Data_Functor.map(Data_Functor.functorArray)(Data_Bifunctor.bimap(Data_Tuple.bifunctorTuple)(Genetics_Browser_Types.ChrId)(function ($160) {
-    return Data_Maybe.fromJust()(Data_BigInt.fromString($160));
+var mouseChrSizes = Data_Functor.map(Data_Functor.functorArray)(Data_Bifunctor.bimap(Data_Tuple.bifunctorTuple)(Genetics_Browser_Types.ChrId)(function ($158) {
+    return Data_Maybe.fromJust()(Data_BigInt.fromString($158));
 }))([ new Data_Tuple.Tuple("1", "195471971"), new Data_Tuple.Tuple("2", "182113224"), new Data_Tuple.Tuple("3", "160039680"), new Data_Tuple.Tuple("4", "156508116"), new Data_Tuple.Tuple("5", "151834684"), new Data_Tuple.Tuple("6", "149736546"), new Data_Tuple.Tuple("7", "145441459"), new Data_Tuple.Tuple("8", "129401213"), new Data_Tuple.Tuple("9", "124595110"), new Data_Tuple.Tuple("10", "130694993"), new Data_Tuple.Tuple("11", "122082543"), new Data_Tuple.Tuple("12", "120129022"), new Data_Tuple.Tuple("13", "120421639"), new Data_Tuple.Tuple("14", "124902244"), new Data_Tuple.Tuple("15", "104043685"), new Data_Tuple.Tuple("16", "98207768"), new Data_Tuple.Tuple("17", "94987271"), new Data_Tuple.Tuple("18", "90702639"), new Data_Tuple.Tuple("19", "61431566"), new Data_Tuple.Tuple("X", "171031299"), new Data_Tuple.Tuple("Y", "91744698") ]);
 var monoidUpdateView = new Data_Monoid.Monoid(function () {
     return semigroupUpdateView;
@@ -40836,14 +40494,12 @@ var diffView = function (v1) {
         return Data_Newtype.wrap(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(new Data_Pair.Pair(Data_Ring.sub(Data_BigInt.ringBigInt)(v3.value0)(v.value0), Data_Ring.sub(Data_BigInt.ringBigInt)(v3.value1)(v.value1)));
     };
 };
-
-// TODO this could almost certainly be done better
 var chunkConsumer = function (dictFoldable) {
     return function (dictMonoid) {
         return function (av) {
             return Control_Coroutine.consumer(Control_Monad_Aff.monadAff)(function (m) {
-                var $104 = Data_Foldable["null"](dictFoldable)(m);
-                if ($104) {
+                var $103 = Data_Foldable["null"](dictFoldable)(m);
+                if ($103) {
                     return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(new Data_Maybe.Just(Data_Unit.unit));
                 };
                 return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.takeVar(av))(function (v) {
@@ -40857,8 +40513,6 @@ var chunkConsumer = function (dictFoldable) {
         };
     };
 };
-
-// Feels like this one takes care of a bit too much...
 var fetchLoop1 = function (v) {
     if (v instanceof Data_Maybe.Nothing) {
         return Control_Monad_Aff_AVar.makeEmptyVar;
@@ -40872,12 +40526,8 @@ var fetchLoop1 = function (v) {
             });
         });
     };
-    throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 616, column 1 - line 618, column 33: " + [ v.constructor.name ]);
+    throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 547, column 1 - line 549, column 33: " + [ v.constructor.name ]);
 };
-
-// | Starts threads that fetch & parse each of the provided tracks,
-// | filling an AVar over time per track, which can be used by other parts of the application
-// | (read only, should be a newtype)
 var fetchLoop = function (cs) {
     return function (urls) {
         return Control_Bind.bind(Control_Monad_Aff.bindAff)(fetchLoop1(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Track_Demo.produceGWAS(cs))(urls.gwas)))(function (v) {
@@ -40944,7 +40594,7 @@ var debugView = function (s) {
                         return $foreign.setWindow(name)(Data_Lens_Getter.viewOn(Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(v.value0))(_PairRec(Data_Lens_Internal_Forget.profunctorForget)))();
                     };
                 };
-                throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 177, column 18 - line 183, column 51: " + [ v.constructor.name ]);
+                throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 171, column 18 - line 177, column 51: " + [ v.constructor.name ]);
             })());
         }));
     };
@@ -40959,7 +40609,7 @@ var debugView = function (s) {
                     return Control_Monad_Aff_AVar.putVar(v$prime)(s.view);
                 });
             };
-            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 187, column 10 - line 192, column 35: " + [ v.constructor.name ]);
+            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 181, column 10 - line 186, column 35: " + [ v.constructor.name ]);
         }));
     };
     return Control_Applicative.pure(Control_Monad_Eff.applicativeEff)({
@@ -40967,8 +40617,6 @@ var debugView = function (s) {
         set: set
     });
 };
-
-// TODO configure UI widths
 var runBrowser = function (config) {
     return function (bc) {
         return Control_Monad_Aff.launchAff(Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)($foreign.initDebugDiv(1.0)))(function () {
@@ -41014,95 +40662,91 @@ var runBrowser = function (config) {
                                 return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeVar(Data_Unit.unit))(function (v4) {
                                     return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v5) {
                                         return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v6) {
-                                            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v7) {
-                                                var initState = {
-                                                    view: v3,
-                                                    viewCmd: v2,
-                                                    viewReady: v4,
-                                                    renderFiber: v5,
-                                                    cachedTracks: v6,
-                                                    lastOverlaps: v7
-                                                };
-                                                var viewTimeout = Data_Newtype.wrap(Data_Time_Duration.newtypeMilliseconds)(100.0);
-                                                var vscale = {
-                                                    width: 60.0,
-                                                    color: Color.black,
-                                                    min: config.score.min,
-                                                    max: config.score.max,
-                                                    sig: config.score.sig
-                                                };
-                                                var tracks = Genetics_Browser_Track_Demo.demoTracks(vscale)(v1);
-                                                var padding = {
-                                                    horizontal: config.trackPadding.left,
-                                                    vertical: config.trackPadding.top
-                                                };
-                                                var entries = Data_Foldable.foldMap(Data_Foldable.foldableMaybe)(Data_Monoid.monoidArray)(Genetics_Browser_Track_Demo.annotLegendTest(Data_Foldable.foldableArray)(Data_Functor.functorArray))(v1.annotations);
-                                                var legend = {
-                                                    width: 120.0,
-                                                    entries: entries
-                                                };
-                                                var mainBrowser = Genetics_Browser_Track_Backend.browser(cSys)(Genetics_Browser_Track_UI_Canvas.trackDimensions(bc))(browserDimensions1)(Genetics_Browser_Track_UI_Canvas.uiSlots(bc))({
-                                                    legend: legend,
-                                                    vscale: vscale
-                                                })({
-                                                    gwas: Genetics_Browser_Track_Demo.renderGWAS(vscale),
-                                                    annotations: Genetics_Browser_Track_Demo.renderAnnot(vscale)
-                                                })({
-                                                    gwas: Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(v1.gwas),
-                                                    annotations: Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(v1.annotations)
-                                                });
-                                                return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
-                                                    $foreign.setWindow("mainBrowser")(mainBrowser)();
-                                                    $foreign.setWindow("debugView")(debugView(initState))();
-                                                    var findAnnot = annotForSnp(Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(v1.annotations));
-                                                    var glyphClick = function (p) {
-                                                        return Control_Monad_Aff.launchAff_(Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryReadVar(v7))(function (v8) {
-                                                            if (v8 instanceof Data_Maybe.Nothing) {
-                                                                return Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
-                                                                    Control_Monad_Eff_Console.log("clicked no glyphs")();
-                                                                    return $foreign.setInfoBoxVisibility("hidden")();
-                                                                });
-                                                            };
-                                                            if (v8 instanceof Data_Maybe.Just) {
-                                                                return Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)((function () {
-                                                                    var clicked = (v8.value0(1.0)(p)).gwas;
-                                                                    return function __do() {
-                                                                        printSNPInfo(clicked)();
-                                                                        var v9 = Data_Array.head(clicked);
-                                                                        if (v9 instanceof Data_Maybe.Nothing) {
-                                                                            return $foreign.setInfoBoxVisibility("hidden")();
-                                                                        };
-                                                                        if (v9 instanceof Data_Maybe.Just) {
-                                                                            $foreign.setInfoBoxContents(snpInfoHTML$prime(findAnnot)(v9.value0))();
-                                                                            return $foreign.setInfoBoxVisibility("visible")();
-                                                                        };
-                                                                        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 525, column 16 - line 532, column 5: " + [ v9.constructor.name ]);
-                                                                    };
-                                                                })());
-                                                            };
-                                                            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 517, column 44 - line 532, column 5: " + [ v8.constructor.name ]);
-                                                        }));
-                                                    };
-                                                    var v8 = Graphics_Canvas.getContext2D((Data_Newtype.unwrap(Genetics_Browser_Track_UI_Canvas.newtypeBrowserCanvas)(bc)).overlay)();
-                                                    var overlayDebug = function (p) {
-                                                        var pad = (Data_Newtype.unwrap(Genetics_Browser_Track_UI_Canvas.newtypeBrowserCanvas)(bc)).trackPadding;
-                                                        var dim = (Data_Newtype.unwrap(Genetics_Browser_Track_UI_Canvas.newtypeBrowserCanvas)(bc)).dimensions;
-                                                        return function __do() {
-                                                            $foreign.setDebugDivVisibility("visible")();
-                                                            return $foreign.setDebugDivPoint(p)();
+                                            var initState = {
+                                                view: v3,
+                                                viewCmd: v2,
+                                                viewReady: v4,
+                                                renderFiber: v5,
+                                                lastOverlaps: v6
+                                            };
+                                            var viewTimeout = Data_Newtype.wrap(Data_Time_Duration.newtypeMilliseconds)(100.0);
+                                            var vscale = {
+                                                width: 60.0,
+                                                color: Color.black,
+                                                min: config.score.min,
+                                                max: config.score.max,
+                                                sig: config.score.sig
+                                            };
+                                            var padding = {
+                                                horizontal: config.trackPadding.left,
+                                                vertical: config.trackPadding.top
+                                            };
+                                            var entries = Data_Foldable.foldMap(Data_Foldable.foldableMaybe)(Data_Monoid.monoidArray)(Genetics_Browser_Track_Demo.annotLegendTest(Data_Foldable.foldableArray)(Data_Functor.functorArray))(v1.annotations);
+                                            var legend = {
+                                                width: 120.0,
+                                                entries: entries
+                                            };
+                                            var mainBrowser = Genetics_Browser_Track_Backend.browser(cSys)(Genetics_Browser_Track_UI_Canvas.trackDimensions(bc))(browserDimensions1)(Genetics_Browser_Track_UI_Canvas.uiSlots(bc))({
+                                                legend: legend,
+                                                vscale: vscale
+                                            })({
+                                                gwas: Genetics_Browser_Track_Demo.renderGWAS(vscale),
+                                                annotations: Genetics_Browser_Track_Demo.renderAnnot(vscale)
+                                            })({
+                                                gwas: Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(v1.gwas),
+                                                annotations: Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(v1.annotations)
+                                            });
+                                            return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
+                                                $foreign.setWindow("mainBrowser")(mainBrowser)();
+                                                $foreign.setWindow("debugView")(debugView(initState))();
+                                                var findAnnot = annotForSnp(Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(v1.annotations));
+                                                var glyphClick = function (p) {
+                                                    return Control_Monad_Aff.launchAff_(Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryReadVar(v6))(function (v7) {
+                                                        if (v7 instanceof Data_Maybe.Nothing) {
+                                                            return Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
+                                                                Control_Monad_Eff_Console.log("clicked no glyphs")();
+                                                                return $foreign.setInfoBoxVisibility("hidden")();
+                                                            });
                                                         };
+                                                        if (v7 instanceof Data_Maybe.Just) {
+                                                            return Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)((function () {
+                                                                var clicked = (v7.value0(1.0)(p)).gwas;
+                                                                return function __do() {
+                                                                    printSNPInfo(clicked)();
+                                                                    var v8 = Data_Array.head(clicked);
+                                                                    if (v8 instanceof Data_Maybe.Nothing) {
+                                                                        return $foreign.setInfoBoxVisibility("hidden")();
+                                                                    };
+                                                                    if (v8 instanceof Data_Maybe.Just) {
+                                                                        $foreign.setInfoBoxContents(snpInfoHTML$prime(findAnnot)(v8.value0))();
+                                                                        return $foreign.setInfoBoxVisibility("visible")();
+                                                                    };
+                                                                    throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 456, column 16 - line 463, column 5: " + [ v8.constructor.name ]);
+                                                                };
+                                                            })());
+                                                        };
+                                                        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 448, column 44 - line 463, column 5: " + [ v7.constructor.name ]);
+                                                    }));
+                                                };
+                                                var v7 = Graphics_Canvas.getContext2D((Data_Newtype.unwrap(Genetics_Browser_Track_UI_Canvas.newtypeBrowserCanvas)(bc)).overlay)();
+                                                var overlayDebug = function (p) {
+                                                    var pad = (Data_Newtype.unwrap(Genetics_Browser_Track_UI_Canvas.newtypeBrowserCanvas)(bc)).trackPadding;
+                                                    var dim = (Data_Newtype.unwrap(Genetics_Browser_Track_UI_Canvas.newtypeBrowserCanvas)(bc)).dimensions;
+                                                    return function __do() {
+                                                        $foreign.setDebugDivVisibility("visible")();
+                                                        return $foreign.setDebugDivPoint(p)();
                                                     };
-                                                    return Genetics_Browser_Track_UI_Canvas.browserOnClick(bc)({
-                                                        overlay: function (v9) {
-                                                            return Control_Applicative.pure(Control_Monad_Eff.applicativeEff)(Data_Unit.unit);
-                                                        },
-                                                        track: glyphClick
-                                                    })();
-                                                }))(function () {
-                                                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(uiViewUpdate(cSys)(viewTimeout)(initState)))(function (v8) {
-                                                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(renderLoop$prime(cSys)(mainBrowser)(bc)(initState)))(function (v9) {
-                                                            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Data_Unit.unit);
-                                                        });
+                                                };
+                                                return Genetics_Browser_Track_UI_Canvas.browserOnClick(bc)({
+                                                    overlay: function (v8) {
+                                                        return Control_Applicative.pure(Control_Monad_Eff.applicativeEff)(Data_Unit.unit);
+                                                    },
+                                                    track: glyphClick
+                                                })();
+                                            }))(function () {
+                                                return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(uiViewUpdate(cSys)(viewTimeout)(initState)))(function (v7) {
+                                                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(renderLoop(cSys)(mainBrowser)(bc)(initState)))(function (v8) {
+                                                        return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Data_Unit.unit);
                                                     });
                                                 });
                                             });
@@ -41153,8 +40797,8 @@ var initBrowser = function (rawConfig) {
             return "gwas";
         }))(Simple_JSON.readMaybe(Simple_JSON.readString))(Simple_JSON.readFieldsNil)(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))()))(Simple_JSON.readFieldsNil)(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))()))(rawConfig);
         if (v1 instanceof Data_Either.Left) {
-            return Data_Foldable.traverse_(Control_Monad_Eff.applicativeEff)(Data_List_Types.foldableNonEmptyList)(function ($161) {
-                return Control_Monad_Eff_Console.log(Data_Foreign.renderForeignError($161));
+            return Data_Foldable.traverse_(Control_Monad_Eff.applicativeEff)(Data_List_Types.foldableNonEmptyList)(function ($159) {
+                return Control_Monad_Eff_Console.log(Data_Foreign.renderForeignError($159));
             })(v1.value0)();
         };
         if (v1 instanceof Data_Either.Right) {
@@ -41172,9 +40816,9 @@ var initBrowser = function (rawConfig) {
                 Control_Monad_Eff_Console.log(Global_Unsafe.unsafeStringify(v1.value0))();
                 return Data_Functor["void"](Control_Monad_Eff.functorEff)(runBrowser(v1.value0)(v3))();
             };
-            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 581, column 7 - line 592, column 33: " + [ v.constructor.name ]);
+            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 512, column 7 - line 523, column 33: " + [ v.constructor.name ]);
         };
-        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 578, column 3 - line 592, column 33: " + [ v1.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 509, column 3 - line 523, column 33: " + [ v1.constructor.name ]);
     };
 };
 module.exports = {
@@ -41191,7 +40835,7 @@ module.exports = {
     _PairRec: _PairRec,
     debugView: debugView,
     uiViewUpdate: uiViewUpdate,
-    "renderLoop'": renderLoop$prime,
+    renderLoop: renderLoop,
     printSNPInfo: printSNPInfo,
     snpInfoHTML: snpInfoHTML,
     "snpInfoHTML'": snpInfoHTML$prime,
@@ -41215,7 +40859,8 @@ module.exports = {
     setWindow: $foreign.setWindow
 };
 
-},{"../Color":5,"../Color.Scheme.Clrs":3,"../Control.Applicative":8,"../Control.Apply":10,"../Control.Bind":14,"../Control.Category":15,"../Control.Coroutine":18,"../Control.Monad.Aff":26,"../Control.Monad.Aff.AVar":22,"../Control.Monad.Eff":46,"../Control.Monad.Eff.Class":31,"../Control.Monad.Eff.Console":33,"../Control.Monad.Eff.Exception":36,"../Control.Monad.Eff.Random":38,"../Control.Monad.Rec.Class":59,"../Control.Semigroupoid":74,"../DOM.Classy.ParentNode":75,"../DOM.HTML":85,"../DOM.HTML.Types":81,"../DOM.HTML.Window":83,"../DOM.Node.ParentNode":87,"../Data.Array":112,"../Data.Bifunctor":120,"../Data.BigInt":122,"../Data.Either":134,"../Data.EuclideanRing":139,"../Data.Foldable":144,"../Data.Foreign":155,"../Data.Function":159,"../Data.Functor":165,"../Data.Lens":209,"../Data.Lens.Getter":183,"../Data.Lens.Internal.Forget":188,"../Data.Lens.Internal.Re":192,"../Data.Lens.Iso":198,"../Data.Lens.Iso.Newtype":197,"../Data.List":214,"../Data.List.Types":213,"../Data.Map":215,"../Data.Maybe":218,"../Data.Monoid":227,"../Data.Newtype":229,"../Data.Ord":236,"../Data.Pair":238,"../Data.Ring":253,"../Data.Semigroup":257,"../Data.Semiring":259,"../Data.Show":262,"../Data.Symbol":274,"../Data.Time.Duration":275,"../Data.Traversable":279,"../Data.Tuple":281,"../Data.Unit":285,"../Genetics.Browser.Track.Backend":292,"../Genetics.Browser.Track.Demo":294,"../Genetics.Browser.Track.UI.Canvas":296,"../Genetics.Browser.Types":300,"../Genetics.Browser.Types.Coordinates":299,"../Global.Unsafe":302,"../Graphics.Canvas":306,"../Graphics.Drawing":308,"../Math":310,"../Partial.Unsafe":319,"../Prelude":322,"../Simple.JSON":323,"../Type.Row":334,"./foreign":297}],299:[function(require,module,exports){
+},{"../Color":5,"../Control.Applicative":8,"../Control.Apply":10,"../Control.Bind":14,"../Control.Category":15,"../Control.Coroutine":18,"../Control.Monad.Aff":26,"../Control.Monad.Aff.AVar":22,"../Control.Monad.Eff":46,"../Control.Monad.Eff.Class":31,"../Control.Monad.Eff.Console":33,"../Control.Monad.Eff.Exception":36,"../Control.Monad.Rec.Class":59,"../Control.Semigroupoid":74,"../DOM.Classy.ParentNode":75,"../DOM.HTML":85,"../DOM.HTML.Types":81,"../DOM.HTML.Window":83,"../DOM.Node.ParentNode":87,"../Data.Array":112,"../Data.Bifunctor":120,"../Data.BigInt":122,"../Data.Either":134,"../Data.EuclideanRing":139,"../Data.Foldable":144,"../Data.Foreign":155,"../Data.Function":159,"../Data.Functor":165,"../Data.Lens":209,"../Data.Lens.Getter":183,"../Data.Lens.Internal.Forget":188,"../Data.Lens.Internal.Re":192,"../Data.Lens.Iso":198,"../Data.List.Types":213,"../Data.Map":215,"../Data.Maybe":218,"../Data.Monoid":227,"../Data.Newtype":229,"../Data.Ord":236,"../Data.Pair":238,"../Data.Ring":253,"../Data.Semigroup":257,"../Data.Semiring":259,"../Data.Show":262,"../Data.Symbol":274,"../Data.Time.Duration":275,"../Data.Traversable":279,"../Data.Tuple":281,"../Data.Unit":285,"../Genetics.Browser.Track.Backend":292,"../Genetics.Browser.Track.Demo":294,"../Genetics.Browser.Track.UI.Canvas":296,"../Genetics.Browser.Types":300,"../Genetics.Browser.Types.Coordinates":299,"../Global.Unsafe":302,"../Graphics.Canvas":306,"../Graphics.Drawing":308,"../Math":310,"../Partial.Unsafe":319,"../Prelude":322,"../Simple.JSON":323,"../Type.Row":334,"./foreign":297}],299:[function(require,module,exports){
+// Generated by purs version 0.11.7
 "use strict";
 var Control_Semigroupoid = require("../Control.Semigroupoid");
 var Data_Array = require("../Data.Array");
@@ -41251,18 +40896,12 @@ var Prelude = require("../Prelude");
 var ViewScale = function (x) {
     return x;
 };
-
-// | Newtype for representing values normalized to fit in some range
 var Normalized = function (x) {
     return x;
 };
 var CoordSysView = function (x) {
     return x;
 };
-
-// | A coordinate system is defined by a set of segments,
-// | which are defined by (mutually exclusive and contiguous) intervals
-// | over the browser coordinates (BigInt in most cases)
 var CoordSys = function (x) {
     return x;
 };
@@ -41275,11 +40914,6 @@ var scaleToScreen$prime = function (v) {
         return Data_BigInt.toNumber(x) * (v.pixelWidth / Data_BigInt.toNumber(v.coordWidth));
     };
 };
-
-// | Given the width of the display in pixels, and how much of the coordinate system
-// | that is currently visible, scale a point in the coordinate system
-// | to the screen.
-// | Always uses zero as the origin -- points scaled with this must still be translated!
 var scaleToScreen = function (v) {
     return function (x) {
         return Data_BigInt.toNumber(x) * (v.screenWidth / Data_BigInt.toNumber(v.viewWidth));
@@ -41290,11 +40924,6 @@ var scaleToGlobal$prime = function (v) {
         return Data_BigInt.fromNumber(x * (Data_BigInt.toNumber(v.coordWidth) / v.pixelWidth));
     };
 };
-
-// | Given the width of the display in pixels, and how much of the coordinate system
-// | that is currently visible, scale a point given in pixels from the left-hand edge
-// | to browser units from the beginning of the browser.
-// | Always uses zero as the origin -- points scaled with this must still be translated!
 var scaleToGlobal = function (v) {
     return function (x) {
         return Data_BigInt.fromNumber(x * (Data_BigInt.toNumber(v.viewWidth) / v.screenWidth));
@@ -41314,9 +40943,6 @@ var pixelsView = function (vs) {
         return new Data_Pair.Pair(f(v.value0), f(v.value1));
     };
 };
-
-// TODO test this one
-// | Helper function for defining predicates on pairs that overlap with a given pair.
 var pairsOverlap = function (dictOrd) {
     return function (v) {
         return function (v1) {
@@ -41326,18 +40952,11 @@ var pairsOverlap = function (dictOrd) {
         };
     };
 };
-
-// | The global coordinate system works by taking the sum of the chromosome sizes,
-// | for now mainly represented as a BigInt, as an Int representation may overflow.
-// | Subsets of the global coordinate system are defined by some interval, namely a Pair of Ints
-// | Helper function to calculate the size of the stretch covered by a pair.
 var pairSize = function (dictRing) {
     return function (v) {
         return Data_Ring.sub(dictRing)(v.value1)(v.value0);
     };
 };
-
-// | Scale an Int pair by changing its length to be `x` times the pair size.
 var scalePairBy = function (p) {
     return function (x) {
         var x$prime = Data_Ord.max(Data_Ord.ordNumber)(0)(x);
@@ -41352,8 +40971,6 @@ var scaleViewBy = function (v) {
         return CoordSysView(scalePairBy(v)(x));
     };
 };
-
-// TODO test that this is idempotent
 var setViewWidth = function (newW) {
     return function (v) {
         var oldW = pairSize(Data_BigInt.ringBigInt)(v);
@@ -41361,11 +40978,6 @@ var setViewWidth = function (newW) {
         return new Data_Pair.Pair(Data_Ring.sub(Data_BigInt.ringBigInt)(v.value0)(d), Data_Semiring.add(Data_BigInt.semiringBigInt)(v.value1)(d));
     };
 };
-
-// | Helper functions for translating and scaling pairs.
-// | They're concretized to `BigInt` for convenience; in truth they would
-// | probably fit better in the UI module.
-// | Translate an BigInt pair to the right by `x` times its size.
 var translatePairBy = function (p) {
     return function (x) {
         var delta = Data_BigInt.fromNumber(x * Data_BigInt.toNumber(pairSize(Data_BigInt.ringBigInt)(p)));
@@ -41404,8 +41016,6 @@ var newtypeNormalized = new Data_Newtype.Newtype(function (n) {
 var newtypeCoordSys = new Data_Newtype.Newtype(function (n) {
     return n;
 }, CoordSys);
-
-// | Helper function for defining predicates on pairs that contain a given point.
 var inPair = function (dictOrd) {
     return function (p) {
         return function (v) {
@@ -41418,8 +41028,6 @@ var genericCoordSys = new Data_Generic_Rep.Generic(function (x) {
 }, function (x) {
     return x;
 });
-
-// | The `Functor` instance maps over the segment borders.
 var functorCoordSys = new Data_Functor.Functor(function (f) {
     return function (v) {
         return CoordSys(Data_Functor.map(Data_Map.functorMap)(Data_Functor.map(Data_Pair.functorPair)(f))(v));
@@ -41433,17 +41041,11 @@ var eqViewScale = new Data_Eq.Eq(function (x) {
 var coordsysviewNewtype = new Data_Newtype.Newtype(function (n) {
     return n;
 }, CoordSysView);
-
-// | A coordinate system is created by providing an array of pairs of
-// | chromosome/segment name (often in the ChrId newtype) and their
-// | respective sizes.
 var coordSys = function (dictOrd) {
     return function (dictSemiring) {
         return function (segs) {
             var v = Data_Array.unzip(segs);
-            
-            // Given an array of sizes, produce an array of contiguous intervals.
-var offsets = function (xs) {
+            var offsets = function (xs) {
                 var os = Data_Traversable.scanl(Data_Traversable.traversableArray)(function (x) {
                     return function (y) {
                         return Data_Semiring.add(dictSemiring)(x)(y);
@@ -41469,20 +41071,14 @@ var around = function (dictRing) {
         };
     };
 };
-
-// | Lens to the segments in a coordinate system.
 var _Segments = function (dictStrong) {
     return Data_Lens_Iso_Newtype._Newtype(newtypeCoordSys)(newtypeCoordSys)(dictStrong.Profunctor0());
 };
-
-// | A Getter' to retrieve the total size of the coordinate system by summing its parts.
 var _TotalSize = function (dictRing) {
     return function ($140) {
         return _Segments(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Getter.to(Data_Newtype.alaF(Data_Functor.functorFn)(Data_Functor.functorFn)(Data_Monoid_Additive.newtypeAdditive)(Data_Monoid_Additive.newtypeAdditive)(Data_Monoid_Additive.Additive)(Data_Foldable.foldMap(Data_Map.foldableMap)(Data_Monoid_Additive.monoidAdditive(dictRing.Semiring0())))(pairSize(dictRing)))($140));
     };
 };
-
-// TODO test that this is idempotent
 var normalizeView = function (cs) {
     return function (minWidth) {
         return function (csv) {
@@ -41511,17 +41107,6 @@ var normalizeView = function (cs) {
         };
     };
 };
-
-// | Attempt to parse a String into a chromosome identifier,
-// | succeeding if there is a corresponding ChrId in the provided coordinate system
-// parseChrId :: forall a.
-//               CoordSys ChrId a
-//            -> String
-//            -> Maybe ChrId
-// parseChrId cs chr =
-//   let chr' = chrId chr
-//   in maybeBool (flip member (cs ^. _Segments)) chr'
-// | Given a coordinate system and a point, find the segment that contains the point, if any.
 var lookupSegment = function (dictOrd) {
     return function (cs) {
         return function (x) {
@@ -41535,9 +41120,6 @@ var lookupSegment = function (dictOrd) {
         };
     };
 };
-
-// | Given a coordinate system and browser scale,
-// | return the browser segments scaled to canvas coordinates.
 var scaledSegments = function (cs) {
     return function (scale) {
         return Data_Functor.map(Data_Map.functorMap)(Data_Functor.map(Data_Pair.functorPair)(scaleToScreen(scale)))(Data_Lens_Getter.viewOn(cs)(_Segments(Data_Lens_Internal_Forget.strongForget)));
@@ -41548,8 +41130,6 @@ var scaledSegments$prime = function (cs) {
         return Data_Functor.map(Data_Map.functorMap)(Data_Functor.map(Data_Pair.functorPair)(scaleToScreen$prime(scale)))(Data_Lens_Getter.viewOn(cs)(_Segments(Data_Lens_Internal_Forget.strongForget)));
     };
 };
-
-// | Given a coordinate system and a range, find the segments that overlap, even partially, with the range.
 var segmentsInPair = function (dictOrd) {
     return function (dictOrd1) {
         return function (cs) {
@@ -41561,8 +41141,6 @@ var segmentsInPair = function (dictOrd) {
         };
     };
 };
-
-// | A Getter' into the size of a segment.
 var _SegmentSize = function (dictRing) {
     return function ($143) {
         return Data_Lens_Lens_Tuple._2(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Getter.to(pairSize(dictRing))($143));
