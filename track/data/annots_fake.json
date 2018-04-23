@@ -3,8 +3,8 @@
     "ChrId": "1",
     "Gene stable ID": "MGP_DBA2J_G0002754",
     "Gene description": "predicted gene 10516 [Source:MGI Symbol;Acc:MGI:3641979]",
-    "Gene start (bp)": 189722003,
-    "Gene end (bp)": 189737400,
+    "Gene start (bp)": 174792257,
+    "Gene end (bp)":   174792400,
     "Gene name": "Gm10516"
   },
   {
@@ -19,8 +19,8 @@
     "ChrId": "3",
     "Gene stable ID": "MGP_DBA2J_G0027580",
     "Gene description": "glutathione S-transferase, mu 2 [Source:MGI Symbol;Acc:MGI:95861]",
-      "Gene start (bp)": 68092749,
-      "Gene end (bp)": 68092799,
+    "Gene start (bp)":  128092617,
+    "Gene end (bp)": 128093017,
     "Gene name": "Gstm2"
   },
   {
@@ -43,8 +43,8 @@
     "ChrId": "6",
     "Gene stable ID": "MGP_DBA2J_G0006880",
     "Gene description": "predicted gene, 44077 [Source:MGI Symbol;Acc:MGI:5690469]",
-      "Gene start (bp)": 55124351,
-      "Gene end (bp)": 55124851,
+      "Gene start (bp)": 134858110,
+      "Gene end (bp)": 134858510,
     "Gene name": "Gm44077"
   },
   {
@@ -83,24 +83,24 @@
     "ChrId": "11",
     "Gene stable ID": "MGP_DBA2J_G0002815",
     "Gene description": "insulin-like growth factor 1, opposite strand [Source:MGI Symbol;Acc:MGI:3841250]",
-    "Gene start (bp)": 35687789,
-    "Gene end (bp)": 35687789,
+    "Gene start (bp)": 3554197,
+    "Gene end (bp)": 3554597,
     "Gene name": "Igf1os"
   },
   {
     "ChrId": "12",
     "Gene stable ID": "MGP_DBA2J_G0019586",
     "Gene description": "paired box 9 [Source:MGI Symbol;Acc:MGI:97493]",
-    "Gene start (bp)": 104719076,
-    "Gene end (bp)": 104719076,
+    "Gene start (bp)": 27980719,
+    "Gene end (bp)": 27981319,
     "Gene name": "Pax9"
   },
   {
     "ChrId": "13",
     "Gene stable ID": "MGP_DBA2J_G0002405",
     "Gene description": "T cell receptor alpha joining 28 [Source:MGI Symbol;Acc:MGI:4439744]",
-    "Gene start (bp)": 91702352,
-    "Gene end (bp)": 91702352,
+    "Gene start (bp)": 85683284,
+    "Gene end (bp)": 85683584,
     "Gene name": "Traj28"
   },
   {
@@ -120,19 +120,19 @@
     "Gene name": "Stxbp5l"
   },
   {
-    "ChrId": "16",
+    "ChrId": "17",
     "Gene stable ID": "MGP_DBA2J_G0023096",
     "Gene description": "tumor necrosis factor receptor superfamily, member 12a [Source:MGI Symbol;Acc:MGI:1351484]",
-    "Gene start (bp)": 31615796,
-    "Gene end (bp)": 31615796,
+    "Gene start (bp)": 37131683,
+    "Gene end (bp)": 37131783,
     "Gene name": "Tnfrsf12a"
   },
   {
-    "ChrId": "18",
+    "ChrId": "17",
     "Gene stable ID": "MGP_DBA2J_G0038738",
     "Gene description": "predicted gene, 22210 [Source:MGI Symbol;Acc:MGI:5451987]",
-    "Gene start (bp)": 70159002,
-    "Gene end (bp)": 70159002,
+    "Gene start (bp)": 37131583,
+    "Gene end (bp)": 37131983,
     "Gene name": "Gm22210"
   }
 ]
