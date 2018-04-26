@@ -1,5 +1,8 @@
 <!doctype html>
 <html>
+  <head>
+    <link href="style.css" rel="stylesheet" >
+  </head>
   <body style="margin: 0">
 
     <h1>Genome browser</h1>
@@ -15,11 +18,11 @@
             <button id="reset"  type="button" >Redraw</button>
         </div>
     </div>
-    <div id="view"></div>
     <script src="./app.js"></script>
     <script>
 
       var localUrls =
+      //{ genes:       "./data/mouse.json",
       { genes:       null,
         gwas:        "./data/gwas.json",
         annotations: "./data/annots_fake.json"
@@ -44,7 +47,7 @@
           bottom: 35.0,
           left: vscaleWidth,
           right: legendWidth },
-        score: { min: 0.0, max: 24.0, sig: 3.75 },
+        score: { min: 0.0, max: 24.0, sig: 2.8 },
         urls: localUrls
       };
 
