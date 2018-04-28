@@ -22,10 +22,9 @@
     <script>
 
       var localUrls =
-      //{ genes:       "./data/mouse.json",
       { genes:       null,
         gwas:        "./data/gwas.json",
-        annotations: "./data/annots_fake.json"
+        annotations: "./data/annotations.json"
       };
 
       var urlRoot = "https://raw.githubusercontent.com/chfi/genetics-browser-example/master/track/data/";
@@ -47,7 +46,7 @@
           bottom: 35.0,
           left: vscaleWidth,
           right: legendWidth },
-        score: { min: 0.0, max: 24.0, sig: 2.8 },
+        score: { min: 0.0, max: 24.0, sig: 4 },
         urls: localUrls
       };
 
