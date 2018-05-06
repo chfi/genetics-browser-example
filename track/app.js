@@ -1,4 +1,190 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.GGB = f()}})(function(){var define,module,exports;return (function(){function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s}return e})()({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.GGB = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+// shim for using process in browser
+var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = runTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    runClearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        runTimeout(drainQueue);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+process.prependListener = noop;
+process.prependOnceListener = noop;
+
+process.listeners = function (name) { return [] }
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
+},{}],2:[function(require,module,exports){
 var bigInt = (function (undefined) {
     "use strict";
 
@@ -1250,192 +1436,6 @@ if ( typeof define === "function" && define.amd ) {
     return bigInt;
   });
 }
-
-},{}],2:[function(require,module,exports){
-// shim for using process in browser
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
-(function () {
-    try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
-    } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
-    }
-    try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
-    } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
-    }
-} ())
-function runTimeout(fun) {
-    if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
-        return setTimeout(fun, 0);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedSetTimeout(fun, 0);
-    } catch(e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-            return cachedSetTimeout.call(null, fun, 0);
-        } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-            return cachedSetTimeout.call(this, fun, 0);
-        }
-    }
-
-
-}
-function runClearTimeout(marker) {
-    if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
-        return clearTimeout(marker);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedClearTimeout(marker);
-    } catch (e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-            return cachedClearTimeout.call(null, marker);
-        } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-            return cachedClearTimeout.call(this, marker);
-        }
-    }
-
-
-
-}
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = runTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    runClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        runTimeout(drainQueue);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
 
 },{}],3:[function(require,module,exports){
 // Generated by purs version 0.11.7
@@ -18350,7 +18350,7 @@ exports.shr = function(x) {
   };
 };
 
-},{"big-integer":1}],134:[function(require,module,exports){
+},{"big-integer":2}],134:[function(require,module,exports){
 // Generated by purs version 0.11.7
 "use strict";
 var $foreign = require("./foreign");
@@ -41772,7 +41772,6 @@ var Data_Semigroup = require("../Data.Semigroup");
 var Data_Semiring = require("../Data.Semiring");
 var Data_Symbol = require("../Data.Symbol");
 var Data_Tuple = require("../Data.Tuple");
-var Data_Unfoldable = require("../Data.Unfoldable");
 var Data_Unit = require("../Data.Unit");
 var Data_Variant = require("../Data.Variant");
 var Data_Variant_Internal = require("../Data.Variant.Internal");
@@ -41786,51 +41785,6 @@ var $$Math = require("../Math");
 var Prelude = require("../Prelude");
 var Type_Equality = require("../Type.Equality");
 var Type_Prelude = require("../Type.Prelude");
-var GCircle = (function () {
-    function GCircle(value0) {
-        this.value0 = value0;
-    };
-    GCircle.create = function (value0) {
-        return new GCircle(value0);
-    };
-    return GCircle;
-})();
-var GRect = (function () {
-    function GRect(value0, value1) {
-        this.value0 = value0;
-        this.value1 = value1;
-    };
-    GRect.create = function (value0) {
-        return function (value1) {
-            return new GRect(value0, value1);
-        };
-    };
-    return GRect;
-})();
-var GMany = (function () {
-    function GMany(value0) {
-        this.value0 = value0;
-    };
-    GMany.create = function (value0) {
-        return new GMany(value0);
-    };
-    return GMany;
-})();
-var GDrawing = (function () {
-    function GDrawing(value0, value1, value2) {
-        this.value0 = value0;
-        this.value1 = value1;
-        this.value2 = value2;
-    };
-    GDrawing.create = function (value0) {
-        return function (value1) {
-            return function (value2) {
-                return new GDrawing(value0, value1, value2);
-            };
-        };
-    };
-    return GDrawing;
-})();
 var withPixelSegments = function (dictMonoid) {
     return function (cs) {
         return function (cdim) {
@@ -41844,8 +41798,16 @@ var withPixelSegments = function (dictMonoid) {
         };
     };
 };
-var negLog10 = function (p) {
-    return -($$Math.log(p) / $$Math.ln10);
+var trackLegend = function (dictFoldable) {
+    return function (dictFunctor) {
+        return function (f) {
+            return function (as) {
+                return Data_Array.nubBy(Data_Function.on(Data_Eq.eq(Data_Eq.eqString))(function (v) {
+                    return v.text;
+                }))(Data_Array.fromFoldable(dictFoldable)(Data_Functor.map(dictFunctor)(f)(as)));
+            };
+        };
+    };
 };
 var mkIcon = function (c) {
     return function (text) {
@@ -41854,32 +41816,6 @@ var mkIcon = function (c) {
         return {
             text: text,
             icon: icon
-        };
-    };
-};
-var intersection = function (dictOrd) {
-    return function (a) {
-        return function (b) {
-            return Data_Map.filterKeys(dictOrd)(Data_Function.flip(Data_Map.member(dictOrd))(b))(a);
-        };
-    };
-};
-var zipMaps = function (dictOrd) {
-    return function (a) {
-        return function (b) {
-            var kbs = Data_Array.unzip(Data_Map.toAscUnfoldable(Data_Unfoldable.unfoldableArray)(intersection(dictOrd)(b)(a)));
-            var kas = Data_Array.unzip(Data_Map.toAscUnfoldable(Data_Unfoldable.unfoldableArray)(intersection(dictOrd)(a)(b)));
-            var kabs = Data_Tuple.uncurry(Data_Array.zip)(Data_Functor.map(Data_Tuple.functorTuple)(Data_Array.zip(Data_Tuple.snd(kas)))(kbs));
-            return Data_Map.fromFoldable(dictOrd)(Data_Foldable.foldableArray)(kabs);
-        };
-    };
-};
-var zipMapsWith = function (dictOrd) {
-    return function (f) {
-        return function (a) {
-            return function (b) {
-                return Data_Functor.map(Data_Map.functorMap)(Data_Tuple.uncurry(f))(zipMaps(dictOrd)(a)(b));
-            };
         };
     };
 };
@@ -41975,28 +41911,15 @@ var rescaleNormSingleGlyphs = function (height) {
         return Data_Functor.map(Data_Functor.functorArray)(renderNormalized1(height)(seg));
     };
 };
-var eqLegend = function (dictEq) {
-    return function (a) {
-        return function (b) {
-            return Data_Eq.eq(dictEq)(a.text)(b.text);
-        };
-    };
-};
-var trackLegend = function (dictFoldable) {
-    return function (dictFunctor) {
-        return function (f) {
-            return function (as) {
-                return Data_Array.nubBy(eqLegend(Data_Eq.eqString))(Data_Array.fromFoldable(dictFoldable)(Data_Functor.map(dictFunctor)(f)(as)));
-            };
-        };
-    };
+var featureNormX = function (v) {
+    return Data_Newtype.wrap(Genetics_Browser_Types_Coordinates.newtypeNormalized)(Data_Newtype.unwrap(Genetics_Browser_Types.newtypeBp)(Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(v.position.value0)(v.frameSize)));
 };
 var drawVScale = function (vscale) {
     return function (height) {
-        var spokes = Data_Functor.map(Data_Functor.functorArray)(function ($76) {
+        var spokes = Data_Functor.map(Data_Functor.functorArray)(function ($64) {
             return (function (v) {
                 return v / Data_Int.toNumber(3);
-            })(Data_Int.toNumber($76));
+            })(Data_Int.toNumber($64));
         })(Data_Array.range(0)(3));
         var hPad = vscale.width / 8.0;
         var label = function (yN) {
@@ -42079,45 +42002,6 @@ var chrLabelTrack$prime = function (slot) {
         return new Data_Tuple.Tuple(slot, Data_FoldableWithIndex.foldMapWithIndex(Data_Map.foldableWithIndexMap)(Data_Monoid.monoidArray)(label)(segs));
     };
 };
-var bumpFeatures = function (dictFoldable) {
-    return function (dictFunctor) {
-        return function (dictRowCons) {
-            return function (dictRowLacks) {
-                return function (dictIsSymbol) {
-                    return function (f) {
-                        return function (l) {
-                            return function (radius) {
-                                return function (other) {
-                                    var minInRadius = function (lr) {
-                                        return Data_Maybe.fromMaybe(1.0)(Data_Foldable.minimum(Data_Ord.ordNumber)(dictFoldable)(Data_Functor.map(dictFunctor)(function (g) {
-                                            var $61 = Genetics_Browser_Types_Coordinates.pairsOverlap(Genetics_Browser_Types.ordBp)(g.position)(lr);
-                                            if ($61) {
-                                                return Data_Lens_Getter.view(f)(g);
-                                            };
-                                            return 1.0;
-                                        })(other)));
-                                    };
-                                    var bump = function (a) {
-                                        var y = minInRadius(Genetics_Browser_Types_Coordinates.aroundPair(Genetics_Browser_Types.ringBp)(radius)(a.position));
-                                        return {
-                                            position: a.position,
-                                            frameSize: a.frameSize,
-                                            feature: Data_Record.insert(dictIsSymbol)(dictRowLacks)(dictRowCons)(l)(y)(a.feature)
-                                        };
-                                    };
-                                    return Data_Functor.map(dictFunctor)(bump);
-                                };
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-};
-var _single = Data_Symbol.SProxy.value;
-var _range = Data_Symbol.SProxy.value;
-var _point = Data_Symbol.SProxy.value;
 var chrLabelTrack = function (cs) {
     var font$prime = Graphics_Drawing_Font.font(Graphics_Drawing_Font.sansSerif)(12)(Data_Monoid.mempty(Graphics_Drawing_Font.monoidFontOptions));
     var chrText = function (chr) {
@@ -42127,10 +42011,10 @@ var chrLabelTrack = function (cs) {
         return {
             drawing: Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
                 return "point";
-            }))(_point)(chrText(chr)),
+            }))(Data_Symbol.SProxy.value)(chrText(chr)),
             horPos: Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
                 return "point";
-            }))(_point)(0.5),
+            }))(Data_Symbol.SProxy.value)(0.5),
             verPos: 3.0e-2
         };
     };
@@ -42146,19 +42030,19 @@ var drawBrowser = function (cs) {
             return function (inputTracks) {
                 return function (canvas) {
                     var uiSlots = Genetics_Browser_Track_UI_Canvas.uiSlots(canvas);
-                    var trackDim = Data_Lens_Getter.viewOn(canvas)(function ($77) {
-                        return Genetics_Browser_Track_UI_Canvas._Track(Data_Lens_Internal_Forget.strongForget)(Genetics_Browser_Track_UI_Canvas._Dimensions(Genetics_Browser_Track_UI_Canvas.newtypeTrackCanvas)(Data_Lens_Internal_Forget.strongForget)($77));
+                    var trackDim = Data_Lens_Getter.viewOn(canvas)(function ($65) {
+                        return Genetics_Browser_Track_UI_Canvas._Track(Data_Lens_Internal_Forget.strongForget)(Genetics_Browser_Track_UI_Canvas._Dimensions(Genetics_Browser_Track_UI_Canvas.newtypeTrackCanvas)(Data_Lens_Internal_Forget.strongForget)($65));
                     });
                     var segmentPixels = function (vw) {
                         return Data_Functor.map(Data_Map.functorMap)(Genetics_Browser_Types_Coordinates.aroundPair(Data_Ring.ringNumber)(-12.0))(Genetics_Browser_Types_Coordinates["scaledSegments'"](cs)(Genetics_Browser_Types_Coordinates.viewScale(trackDim)(vw)));
                     };
                     var tracks = (function () {
-                        var gwasT = renderers.gwas(trackDim)(inputTracks.gwas);
+                        var snpsT = renderers.snps(trackDim)(inputTracks.snps);
                         var annotT = renderers.annotations(trackDim)(inputTracks.annotations);
                         return function (v) {
                             var segs = segmentPixels(v);
                             return {
-                                gwas: gwasT(segs),
+                                snps: snpsT(segs),
                                 annotations: annotT(segs)
                             };
                         };
@@ -42176,8 +42060,8 @@ var drawBrowser = function (cs) {
                         var f = function (v1) {
                             return Graphics_Drawing.translate(v1.point.x)(v1.point.y)(v1.drawing(Data_Unit.unit));
                         };
-                        return function ($78) {
-                            return Data_Foldable.foldMap(Data_Foldable.foldableArray)(Graphics_Drawing.monoidDrawing)(f)(withPixelSegments(Data_Monoid.monoidArray)(cs)(trackDim)(v)($78));
+                        return function ($66) {
+                            return Data_Foldable.foldMap(Data_Foldable.foldableArray)(Graphics_Drawing.monoidDrawing)(f)(withPixelSegments(Data_Monoid.monoidArray)(cs)(trackDim)(v)($66));
                         };
                     };
                     var drawInSlot = function (v) {
@@ -42204,105 +42088,27 @@ var drawBrowser = function (cs) {
         };
     };
 };
-var drawBrowser$prime = function (cs) {
-    return function (ui) {
-        return function (renderers) {
-            return function (inputTracks) {
-                return function (canvas) {
-                    var uiSlots = Genetics_Browser_Track_UI_Canvas.uiSlots(canvas);
-                    var trackDim = Data_Lens_Getter.viewOn(canvas)(function ($79) {
-                        return Genetics_Browser_Track_UI_Canvas._Track(Data_Lens_Internal_Forget.strongForget)(Genetics_Browser_Track_UI_Canvas._Dimensions(Genetics_Browser_Track_UI_Canvas.newtypeTrackCanvas)(Data_Lens_Internal_Forget.strongForget)($79));
-                    });
-                    var segmentPixels = function (vw) {
-                        return Data_Functor.map(Data_Map.functorMap)(Genetics_Browser_Types_Coordinates.aroundPair(Data_Ring.ringNumber)(-12.0))(Genetics_Browser_Types_Coordinates["scaledSegments'"](cs)(Genetics_Browser_Types_Coordinates.viewScale(trackDim)(vw)));
-                    };
-                    var tracks = (function () {
-                        var gwasT = renderers.gwas(trackDim)(inputTracks.gwas);
-                        var annotT = renderers.annotations(trackDim)(inputTracks.annotations);
-                        return function (v) {
-                            var segs = segmentPixels(v);
-                            return {
-                                gwas: gwasT(segs),
-                                annotations: annotT(segs)
-                            };
-                        };
-                    })();
-                    var ruler = Graphics_Drawing.translate(ui.vscale.width)(uiSlots.top.size.height)(horRulerTrack(ui.vscale)(Color_Scheme_Clrs.red)(trackDim));
-                    var overlayDim = Data_Lens_Getter.viewOn(canvas)(Genetics_Browser_Track_UI_Canvas._Dimensions(Genetics_Browser_Track_UI_Canvas.newtypeBrowserCanvas)(Data_Lens_Internal_Forget.strongForget));
-                    var renderUIElement = function (m) {
-                        return function (k) {
-                            return function (s) {
-                                return Data_Foldable.fold(Data_Foldable.foldableMaybe)(Data_Monoid.monoidArray)(Data_Functor.map(Data_Maybe.functorMaybe)(rescaleNormSingleGlyphs(overlayDim.height)(s))(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(k)(m)));
-                            };
-                        };
-                    };
-                    var drawTrackUI = function (v) {
-                        var f = function (v1) {
-                            return Graphics_Drawing.translate(v1.point.x)(v1.point.y)(v1.drawing(Data_Unit.unit));
-                        };
-                        return function ($80) {
-                            return Data_Foldable.foldMap(Data_Foldable.foldableArray)(Graphics_Drawing.monoidDrawing)(f)(withPixelSegments(Data_Monoid.monoidArray)(cs)(trackDim)(v)($80));
-                        };
-                    };
-                    var drawInSlot = function (v) {
-                        return function (d) {
-                            return Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(Graphics_Drawing.translate(v.offset.x)(v.offset.y)(Graphics_Drawing.filled(Graphics_Drawing.fillColor(Color.white))(Graphics_Drawing.rectangle(0)(0)(v.size.width)(v.size.height))))(Graphics_Drawing.translate(v.offset.x)(v.offset.y)(d));
-                        };
-                    };
-                    var legend = drawInSlot(uiSlots.right)(drawLegend(ui.legend)(uiSlots.right.size.height));
-                    var vScale = drawInSlot(uiSlots.left)(drawVScale(ui.vscale)(uiSlots.left.size.height));
-                    var fixedUI = Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(vScale)(Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(legend)(ruler));
-                    var chrLabels = renderUIElement(chrLabelTrack(cs));
-                    var relativeUI = function (v) {
-                        return drawTrackUI(Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(v))(chrLabels);
-                    };
-                    return function (v) {
-                        return {
-                            tracks: tracks(v),
-                            relativeUI: relativeUI(v),
-                            fixedUI: fixedUI
-                        };
-                    };
-                };
-            };
-        };
-    };
-};
-var _batch = Data_Symbol.SProxy.value;
 module.exports = {
-    intersection: intersection,
-    zipMaps: zipMaps,
-    zipMapsWith: zipMapsWith,
-    _point: _point,
-    _range: _range,
-    _batch: _batch,
-    _single: _single,
-    GCircle: GCircle,
-    GRect: GRect,
-    GMany: GMany,
-    GDrawing: GDrawing,
+    featureNormX: featureNormX,
     horRulerTrack: horRulerTrack,
     chrLabelTrack: chrLabelTrack,
     "chrLabelTrack'": chrLabelTrack$prime,
-    bumpFeatures: bumpFeatures,
-    negLog10: negLog10,
     drawVScale: drawVScale,
     mkIcon: mkIcon,
     drawLegendItem: drawLegendItem,
     drawLegend: drawLegend,
     groupToMap: groupToMap,
-    eqLegend: eqLegend,
     trackLegend: trackLegend,
     horPlaceOnSegment: horPlaceOnSegment,
     finalizeNormDrawing: finalizeNormDrawing,
     renderNormalized1: renderNormalized1,
     rescaleNormSingleGlyphs: rescaleNormSingleGlyphs,
     withPixelSegments: withPixelSegments,
-    drawBrowser: drawBrowser,
-    "drawBrowser'": drawBrowser$prime
+    drawBrowser: drawBrowser
 };
 
-},{"../Color":5,"../Color.Scheme.Clrs":3,"../Control.Applicative":8,"../Control.Semigroupoid":74,"../Data.Array":124,"../Data.BigInt":134,"../Data.Eq":149,"../Data.EuclideanRing":151,"../Data.Foldable":156,"../Data.FoldableWithIndex":157,"../Data.Function":173,"../Data.Functor":179,"../Data.FunctorWithIndex":181,"../Data.Int":193,"../Data.Lens":224,"../Data.Lens.Getter":198,"../Data.Lens.Internal.Forget":203,"../Data.List":229,"../Data.Map":230,"../Data.Maybe":233,"../Data.Monoid":242,"../Data.Newtype":244,"../Data.Number.Format":249,"../Data.Ord":253,"../Data.Pair":255,"../Data.Record":269,"../Data.Ring":271,"../Data.Semigroup":275,"../Data.Semiring":277,"../Data.Symbol":292,"../Data.Tuple":299,"../Data.Unfoldable":301,"../Data.Unit":303,"../Data.Variant":306,"../Data.Variant.Internal":305,"../Genetics.Browser.Track.UI.Canvas":314,"../Genetics.Browser.Types":318,"../Genetics.Browser.Types.Coordinates":317,"../Graphics.Canvas":324,"../Graphics.Drawing":326,"../Graphics.Drawing.Font":325,"../Math":328,"../Prelude":340,"../Type.Equality":349,"../Type.Prelude":350}],311:[function(require,module,exports){
+},{"../Color":5,"../Color.Scheme.Clrs":3,"../Control.Applicative":8,"../Control.Semigroupoid":74,"../Data.Array":124,"../Data.BigInt":134,"../Data.Eq":149,"../Data.EuclideanRing":151,"../Data.Foldable":156,"../Data.FoldableWithIndex":157,"../Data.Function":173,"../Data.Functor":179,"../Data.FunctorWithIndex":181,"../Data.Int":193,"../Data.Lens":224,"../Data.Lens.Getter":198,"../Data.Lens.Internal.Forget":203,"../Data.List":229,"../Data.Map":230,"../Data.Maybe":233,"../Data.Monoid":242,"../Data.Newtype":244,"../Data.Number.Format":249,"../Data.Ord":253,"../Data.Pair":255,"../Data.Record":269,"../Data.Ring":271,"../Data.Semigroup":275,"../Data.Semiring":277,"../Data.Symbol":292,"../Data.Tuple":299,"../Data.Unit":303,"../Data.Variant":306,"../Data.Variant.Internal":305,"../Genetics.Browser.Track.UI.Canvas":314,"../Genetics.Browser.Types":318,"../Genetics.Browser.Types.Coordinates":317,"../Graphics.Canvas":324,"../Graphics.Drawing":326,"../Graphics.Drawing.Font":325,"../Math":328,"../Prelude":340,"../Type.Equality":349,"../Type.Prelude":350}],311:[function(require,module,exports){
+// Generated by purs version 0.11.7
 "use strict";
 var Control_Applicative = require("../Control.Applicative");
 var Control_Apply = require("../Control.Apply");
@@ -42353,8 +42159,6 @@ var validInt = function (s) {
     };
     throw new Error("Failed pattern match at Genetics.Browser.Track.Bed line 89, column 14 - line 91, column 20: " + [ v.constructor.name ]);
 };
-
-// TODO this should compare to browser coord sys used
 var validChrId = function ($46) {
     return Control_Applicative.pure(Data_Validation_Semigroup.applicativeV(Data_List_Types.semigroupNonEmptyList))(Data_Newtype.wrap(Genetics_Browser_Types.newtypeChrId)(Data_String.drop(3)($46)));
 };
@@ -42371,9 +42175,6 @@ var validBigInt = function (s) {
 var validList = function (x) {
     return Data_Traversable.traverse(Data_Traversable.traversableArray)(Data_Validation_Semigroup.applicativeV(Data_List_Types.semigroupNonEmptyList))(validBigInt)(Data_String.split(Data_Newtype.wrap(Data_String.newtypePattern)(","))(x));
 };
-
-// TODO validate `*Start` and `*End` by providing a coord sys and comparing thick* to chrom* etc.
-// -- TODO more validation & parsing (e.g. of `itemRgb` and `strand` could be done, but not necessary ATM)
 var validLine = function (l) {
     return Control_Apply.apply(Data_Validation_Semigroup.applyV(Data_List_Types.semigroupNonEmptyList))(Control_Apply.apply(Data_Validation_Semigroup.applyV(Data_List_Types.semigroupNonEmptyList))(Control_Apply.apply(Data_Validation_Semigroup.applyV(Data_List_Types.semigroupNonEmptyList))(Control_Apply.apply(Data_Validation_Semigroup.applyV(Data_List_Types.semigroupNonEmptyList))(Control_Apply.apply(Data_Validation_Semigroup.applyV(Data_List_Types.semigroupNonEmptyList))(Control_Apply.apply(Data_Validation_Semigroup.applyV(Data_List_Types.semigroupNonEmptyList))(Control_Apply.apply(Data_Validation_Semigroup.applyV(Data_List_Types.semigroupNonEmptyList))(Control_Apply.apply(Data_Validation_Semigroup.applyV(Data_List_Types.semigroupNonEmptyList))(Data_Functor.map(Data_Validation_Semigroup.functorV)(function (v) {
         return function (v1) {
@@ -42455,9 +42256,6 @@ var validateBedChunk = function (d) {
 var parsedLineTransformer = Control_Coroutine.transform(Control_Monad_Aff.monadAff)(function ($47) {
     return Data_Validation_Semigroup.unV(Data_Function["const"](Data_Monoid.mempty(Data_Monoid.monoidArray)))(Control_Category.id(Control_Category.categoryFn))(validateBedChunk($47));
 });
-
-// Right ls -> pure ls
-// fetchBed :: String -> Aff _ (Array (BedLine ChrId BigInt))
 var fetchBed = function (url) {
     return Control_Bind.bind(Control_Monad_Aff.bindAff)(Data_Functor.map(Control_Monad_Aff.functorAff)(function (v) {
         return v.response;
@@ -42558,19 +42356,21 @@ var Data_Eq = require("../Data.Eq");
 var Data_EuclideanRing = require("../Data.EuclideanRing");
 var Data_Filterable = require("../Data.Filterable");
 var Data_Foldable = require("../Data.Foldable");
+var Data_FoldableWithIndex = require("../Data.FoldableWithIndex");
 var Data_Foreign = require("../Data.Foreign");
 var Data_Foreign_Index = require("../Data.Foreign.Index");
 var Data_Foreign_Keys = require("../Data.Foreign.Keys");
 var Data_Function = require("../Data.Function");
 var Data_Functor = require("../Data.Functor");
 var Data_FunctorWithIndex = require("../Data.FunctorWithIndex");
-var Data_HeytingAlgebra = require("../Data.HeytingAlgebra");
 var Data_Identity = require("../Data.Identity");
 var Data_Lens = require("../Data.Lens");
 var Data_Lens_Fold = require("../Data.Lens.Fold");
 var Data_Lens_Getter = require("../Data.Lens.Getter");
 var Data_Lens_Index = require("../Data.Lens.Index");
 var Data_Lens_Internal_Forget = require("../Data.Lens.Internal.Forget");
+var Data_Lens_Internal_Re = require("../Data.Lens.Internal.Re");
+var Data_Lens_Iso = require("../Data.Lens.Iso");
 var Data_List = require("../Data.List");
 var Data_List_Types = require("../Data.List.Types");
 var Data_Map = require("../Data.Map");
@@ -42581,14 +42381,12 @@ var Data_Newtype = require("../Data.Newtype");
 var Data_Ord = require("../Data.Ord");
 var Data_Pair = require("../Data.Pair");
 var Data_Profunctor_Strong = require("../Data.Profunctor.Strong");
-var Data_Record = require("../Data.Record");
 var Data_Record_Builder = require("../Data.Record.Builder");
 var Data_Record_Extra = require("../Data.Record.Extra");
 var Data_Ring = require("../Data.Ring");
 var Data_Semigroup = require("../Data.Semigroup");
 var Data_Semiring = require("../Data.Semiring");
 var Data_Show = require("../Data.Show");
-var Data_String = require("../Data.String");
 var Data_Symbol = require("../Data.Symbol");
 var Data_Traversable = require("../Data.Traversable");
 var Data_Tuple = require("../Data.Tuple");
@@ -42598,6 +42396,7 @@ var Data_Variant = require("../Data.Variant");
 var Debug_Trace = require("../Debug.Trace");
 var Genetics_Browser_Track_Backend = require("../Genetics.Browser.Track.Backend");
 var Genetics_Browser_Track_Bed = require("../Genetics.Browser.Track.Bed");
+var Genetics_Browser_Track_UI_Canvas = require("../Genetics.Browser.Track.UI.Canvas");
 var Genetics_Browser_Types = require("../Genetics.Browser.Types");
 var Genetics_Browser_Types_Coordinates = require("../Genetics.Browser.Types.Coordinates");
 var Graphics_Canvas = require("../Graphics.Canvas");
@@ -42611,16 +42410,16 @@ var Simple_JSON = require("../Simple.JSON");
 var Type_Prelude = require("../Type.Prelude");
 var Type_Row = require("../Type.Row");
 var Unsafe_Coerce = require("../Unsafe.Coerce");
+var showAnnotationField = function (fv) {
+    return fv.field + (": " + fv.value);
+};
 var showAnnotation = function (a) {
-    var showOther = function (fv) {
-        return fv.field + (": " + fv.value);
-    };
     var chr = "Chr: " + Data_Show.show(Genetics_Browser_Types.showChrId)(a.feature.chr);
     var name = Data_Maybe.fromMaybe("SNP: " + a.feature.name)(Data_Functor.map(Data_Maybe.functorMaybe)(function (v) {
         return "Gene: " + v;
     })(a.feature.gene));
     var pos = "Pos: " + Data_Show.show(Genetics_Browser_Types.showBp)(a.feature.pos);
-    return Data_Semigroup.append(Data_List_Types.semigroupList)(Data_List.fromFoldable(Data_Foldable.foldableArray)([ name, chr, pos ]))(Data_Functor.map(Data_List_Types.functorList)(showOther)(a.feature.rest));
+    return Data_Semigroup.append(Data_List_Types.semigroupList)(Data_List.fromFoldable(Data_Foldable.foldableArray)([ name, chr, pos ]))(Data_Functor.map(Data_List_Types.functorList)(showAnnotationField)(a.feature.rest));
 };
 var peak1 = function (radius) {
     return function (snps) {
@@ -42644,105 +42443,86 @@ var peaks = function (r) {
         return Data_Unfoldable.unfoldr(Data_Unfoldable.unfoldableArray)(peak1(r))(snps);
     };
 };
-var visiblePeaks = function (vs) {
-    return function (snps) {
-        var radius = Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(Genetics_Browser_Types_Coordinates.xPerPixel(vs) * 3.75);
-        return Debug_Trace.trace(Debug_Trace.warn())("radius: " + Data_Show.show(Genetics_Browser_Types.showBp)(radius))(function (v) {
-            return Data_Functor.map(Data_Map.functorMap)(peaks(radius))(snps);
-        });
-    };
-};
-var peak$prime = function (dictOrd) {
-    return function (dictRing) {
-        return function (v) {
-            return function (radius) {
-                return function (as) {
-                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Foldable.maximumBy(Data_Foldable.foldableArray)(Data_Function.on(Data_Ord.compare(Data_Ord.ordOrdering))(v.value))(as))(function (v1) {
-                        var covers = Genetics_Browser_Types_Coordinates.aroundPair(dictRing)(radius)(v.pos(v1));
-                        var v2 = Data_Filterable.partition(Data_Filterable.filterableArray)(function (p) {
-                            return Genetics_Browser_Types_Coordinates.pairsOverlap(dictOrd)(v.pos(p))(covers);
-                        })(as);
-                        return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(new Data_Tuple.Tuple({
-                            covers: covers,
-                            peak: v1,
-                            mountain: v2.yes
-                        }, v2.no));
-                    });
-                };
-            };
-        };
-    };
-};
-var normalizedY = function (v) {
-    return function (y) {
-        return Genetics_Browser_Types_Coordinates.Normalized((Genetics_Browser_Track_Backend.negLog10(y) - v.min) / (v.max - v.min));
-    };
-};
-var placeScored = function (verScale) {
-    return function (v) {
-        var y = normalizedY(verScale)(v.feature.score);
-        var x = Genetics_Browser_Types_Coordinates.Normalized(Data_Newtype.unwrap(Genetics_Browser_Types.newtypeBp)(Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(v.position.value0)(v.frameSize)));
-        return {
-            x: x,
-            y: y
-        };
-    };
-};
-var inRangeOf = function (r) {
+var parseSNP = function (cSys) {
     return function (a) {
-        return function (b) {
-            return Genetics_Browser_Types_Coordinates.pairsOverlap(Genetics_Browser_Types.ordBp)(a.position)(Genetics_Browser_Types_Coordinates.aroundPair(Genetics_Browser_Types.ringBp)(r)(b.position));
-        };
-    };
-};
-var interestingAnnots = function (dictFilterable) {
-    return function (radius) {
-        return function (snps) {
-            return Data_Filterable.filter(dictFilterable)(Data_Foldable.any(Data_Map.foldableMap)(Data_HeytingAlgebra.heytingAlgebraFunction(Data_HeytingAlgebra.heytingAlgebraBoolean))(Data_Foldable.any(Data_Foldable.foldableArray)(Data_HeytingAlgebra.heytingAlgebraFunction(Data_HeytingAlgebra.heytingAlgebraBoolean))(inRangeOf(radius)))(snps));
-        };
-    };
-};
-var gemmaJSONParse = function (cs) {
-    return function (j) {
-        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(j)(Data_Argonaut_Prisms._Object(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))))(function (v) {
-            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.ChrId)(Data_Lens_Fold.previewOn(v)(function ($234) {
-                return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("chr")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($234));
-            })))(function (v1) {
-                return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.Bp)(Data_Lens_Fold.previewOn(v)(function ($235) {
-                    return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("ps")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($235));
-                })))(function (v2) {
-                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($236) {
-                        return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("p_wald")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($236));
-                    }))(function (v3) {
-                        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($237) {
-                            return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("rs")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($237));
-                        }))(function (v4) {
-                            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(function ($238) {
-                                return Genetics_Browser_Types.Bp(Data_BigInt.toNumber(Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)($238)));
-                            })(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(v1)(Data_Lens_Getter.view(Genetics_Browser_Types_Coordinates._Segments(Data_Lens_Internal_Forget.strongForget))(cs))))(function (v5) {
-                                return Control_Applicative.pure(Data_Maybe.applicativeMaybe)({
-                                    position: new Data_Pair.Pair(v2, v2),
-                                    frameSize: v5,
-                                    feature: {
-                                        score: v3,
-                                        chrId: v1,
-                                        name: v4
-                                    }
-                                });
-                            });
-                        });
-                    });
+        return Control_Bind.bind(Control_Monad_Except_Trans.bindExceptT(Data_Identity.monadIdentity))(Simple_JSON["read'"](Simple_JSON.readRecord()(Simple_JSON.readFieldsCons(new Data_Symbol.IsSymbol(function () {
+            return "chr";
+        }))(Simple_JSON.readString)(Simple_JSON.readFieldsCons(new Data_Symbol.IsSymbol(function () {
+            return "p_wald";
+        }))(Simple_JSON.readNumber)(Simple_JSON.readFieldsCons(new Data_Symbol.IsSymbol(function () {
+            return "ps";
+        }))(Simple_JSON.readNumber)(Simple_JSON.readFieldsCons(new Data_Symbol.IsSymbol(function () {
+            return "rs";
+        }))(Simple_JSON.readString)(Simple_JSON.readFieldsNil)(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))()))(a))(function (v) {
+            var position = (function (p) {
+                return Data_Functor.map(Data_Pair.functorPair)(Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp))(new Data_Pair.Pair(p, p));
+            })(v.ps);
+            var feature = {
+                score: v.p_wald,
+                chrId: Data_Newtype.wrap(Genetics_Browser_Types.newtypeChrId)(v.chr),
+                name: v.rs
+            };
+            return Control_Bind.bind(Control_Monad_Except_Trans.bindExceptT(Data_Identity.monadIdentity))((function () {
+                var v1 = Data_Map.lookup(Genetics_Browser_Types.ordChrId)(feature.chrId)(Data_Lens_Getter.view(Genetics_Browser_Types_Coordinates._Segments(Data_Lens_Internal_Forget.strongForget))(cSys));
+                if (v1 instanceof Data_Maybe.Nothing) {
+                    return Control_Monad_Error_Class.throwError(Control_Monad_Except_Trans.monadThrowExceptT(Data_Identity.monadIdentity))(Control_Applicative.pure(Data_List_Types.applicativeNonEmptyList)(new Data_Foreign.ForeignError("Annotation chr not found in coordinate system!")));
+                };
+                if (v1 instanceof Data_Maybe.Just) {
+                    return Control_Applicative.pure(Control_Monad_Except_Trans.applicativeExceptT(Data_Identity.monadIdentity))(Genetics_Browser_Types.Bp(Data_BigInt.toNumber(Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)(v1.value0))));
+                };
+                throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 203, column 16 - line 209, column 49: " + [ v1.constructor.name ]);
+            })())(function (v1) {
+                return Control_Applicative.pure(Control_Monad_Except_Trans.applicativeExceptT(Data_Identity.monadIdentity))({
+                    position: position,
+                    frameSize: v1,
+                    feature: feature
                 });
             });
         });
     };
 };
-var filterSig = function (v) {
-    var sig$prime = $$Math.pow(10.0)(-v.sig);
-    var isSignificant = function (v1) {
-        return v1.feature.score <= sig$prime;
+var normYLogScore = function (s) {
+    return function ($139) {
+        return Genetics_Browser_Types_Coordinates.normalize(Data_EuclideanRing.euclideanRingNumber)(s.min)(s.max)(Data_Newtype.unwrap(Genetics_Browser_Types.newtypeNegLog10)(Data_Lens_Getter.view(Genetics_Browser_Types._NegLog10(Data_Lens_Internal_Forget.profunctorForget))($139)));
     };
-    return Data_Functor.map(Data_Map.functorMap)(Data_Filterable.filter(Data_Filterable.filterableArray)(isSignificant));
+};
+var placeScored = function (vs) {
+    return function (s) {
+        return {
+            x: Genetics_Browser_Track_Backend.featureNormX(s),
+            y: Data_Newtype.wrap(Genetics_Browser_Types_Coordinates.newtypeNormalized)(normYLogScore(vs)(s.feature.score))
+        };
+    };
+};
+var getSNPs = function (cs) {
+    return function (url) {
+        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Network_HTTP_Affjax.get(Network_HTTP_Affjax_Response.responsableForeign)(url))(function (v) {
+            return Control_Bind.bind(Control_Monad_Aff.bindAff)((function () {
+                var v1 = Control_Monad_Except.runExcept(Data_Foreign.readArray(v.response));
+                if (v1 instanceof Data_Either.Left) {
+                    return Control_Monad_Error_Class.throwError(Control_Monad_Aff.monadThrowAff)(Control_Monad_Eff_Exception.error("SNP data is not an array"));
+                };
+                if (v1 instanceof Data_Either.Right) {
+                    return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(v1.value0);
+                };
+                throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 304, column 5 - line 306, column 31: " + [ v1.constructor.name ]);
+            })())(function (v1) {
+                var parsed = Data_Filterable.partitionMap(Data_Filterable.filterableArray)(function ($140) {
+                    return Control_Monad_Except.runExcept(parseSNP(cs)($140));
+                })(v1);
+                return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v2) {
+                    return v2.feature.chrId;
+                })(Data_Filterable.filter(Data_Filterable.filterableArray)(function (f) {
+                    return Data_Ord.greaterThanOrEq(Genetics_Browser_Types.ordBp)(Data_Pair.fst(f.position))(Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(0));
+                })(parsed.right)));
+            });
+        });
+    };
+};
+var filterSig = function (v) {
+    return Data_Functor.map(Data_Map.functorMap)(Data_Filterable.filter(Data_Filterable.filterableArray)(function (snp) {
+        return snp.feature.score <= Data_Lens_Getter.viewOn(v.sig)(Data_Lens_Iso.re(Genetics_Browser_Types._NegLog10(Data_Lens_Internal_Re.profunctorRe(Data_Lens_Internal_Forget.profunctorForget))));
+    }));
 };
 var fetchJsonChunks = function (url) {
     return Control_Bind.bind(Control_Monad_Aff.bindAff)(Data_Functor.map(Control_Monad_Aff.functorAff)(function (v) {
@@ -42755,55 +42535,18 @@ var fetchJsonChunks = function (url) {
         if (v1 instanceof Data_Maybe.Just) {
             return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Genetics_Browser_Track_Bed.chunkProducer(512)(v1.value0));
         };
-        throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 172, column 3 - line 174, column 43: " + [ v1.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 158, column 3 - line 160, column 43: " + [ v1.constructor.name ]);
     });
-};
-var fetchJSON = function (p) {
-    return function (url) {
-        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Data_Functor.map(Control_Monad_Aff.functorAff)(function (v) {
-            return v.response;
-        })(Network_HTTP_Affjax.get(Network_HTTP_Affjax_Response.responsableJson)(url)))(function (v) {
-            var v1 = Data_Lens_Fold.previewOn(v)(Data_Argonaut_Prisms._Array(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst)));
-            if (v1 instanceof Data_Maybe.Nothing) {
-                return Control_Monad_Error_Class.throwError(Control_Monad_Aff.monadThrowAff)(Control_Monad_Eff_Exception.error("Parse error: JSON is not an array"));
-            };
-            if (v1 instanceof Data_Maybe.Just) {
-                var v2 = Data_Traversable.traverse(Data_Traversable.traversableArray)(Data_Maybe.applicativeMaybe)(p)(v1.value0);
-                if (v2 instanceof Data_Maybe.Nothing) {
-                    return Control_Monad_Error_Class.throwError(Control_Monad_Aff.monadThrowAff)(Control_Monad_Eff_Exception.error("Failed to parse JSON features"));
-                };
-                if (v2 instanceof Data_Maybe.Just) {
-                    return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(v2.value0);
-                };
-                throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 219, column 16 - line 221, column 27: " + [ v2.constructor.name ]);
-            };
-            throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 217, column 3 - line 221, column 27: " + [ v1.constructor.name ]);
-        });
-    };
-};
-var getGWAS = function (cs) {
-    return function (url) {
-        return Data_Functor.map(Control_Monad_Aff.functorAff)(Data_Functor.map(Data_Functor.functorFn)(Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v) {
-            return v.feature.chrId;
-        }))(Data_Filterable.filter(Data_Filterable.filterableArray)(function (f) {
-            return Data_Ord.greaterThanOrEq(Genetics_Browser_Types.ordBp)(Data_Pair.fst(f.position))(Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(0));
-        })))(fetchJSON(gemmaJSONParse(cs))(url));
-    };
 };
 var featureProd = function (url) {
     return function (parse) {
         return Control_Bind.bind(Control_Monad_Aff.bindAff)(fetchJsonChunks(url))(function (v) {
-            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Control_Coroutine.transformProducer(Control_Monad_Aff.monadRecAff)(Control_Monad_Aff.parallelAff)(v)(Control_Coroutine.transform(Control_Monad_Aff.monadAff)(function ($239) {
+            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Control_Coroutine.transformProducer(Control_Monad_Aff.monadRecAff)(Control_Monad_Aff.parallelAff)(v)(Control_Coroutine.transform(Control_Monad_Aff.monadAff)(function ($141) {
                 return Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v1) {
                     return v1.feature.chrId;
-                })(Data_Filterable.filterMap(Data_Filterable.filterableArray)(parse)($239));
+                })(Data_Filterable.filterMap(Data_Filterable.filterableArray)(parse)($141));
             })));
         });
-    };
-};
-var produceGWAS = function (cs) {
-    return function (url) {
-        return featureProd(url)(gemmaJSONParse(cs));
     };
 };
 var dist = function (p1) {
@@ -42813,13 +42556,13 @@ var dist = function (p1) {
         return $$Math.sqrt($$Math.pow(x$prime)(2.0) + $$Math.pow(y$prime)(2.0));
     };
 };
-var renderGWAS = function (verscale) {
+var renderSNPs = function (verScale) {
     return function (cdim) {
         return function (snps) {
-            var rescale = function (seg) {
+            var rescale = function (v) {
                 return function (npoint) {
                     var y = cdim.height * (1 - Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.newtypeNormalized)(npoint.y));
-                    var x = seg.value0 + Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(seg) * Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.newtypeNormalized)(npoint.x);
+                    var x = v.value0 + Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(v) * Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.newtypeNormalized)(npoint.x);
                     return {
                         x: x,
                         y: y
@@ -42836,19 +42579,25 @@ var renderGWAS = function (verscale) {
                             if (Data_Boolean.otherwise) {
                                 return Data_Maybe.Nothing.value;
                             };
-                            throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 629, column 15 - line 629, column 79: " + [ v.constructor.name ]);
+                            throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 477, column 15 - line 477, column 63: " + [ v.constructor.name ]);
                         };
                         return Data_Filterable.filterMap(Data_Filterable.filterableArray)(covers)(pts);
                     };
                 };
             };
-            var npointed = Data_Functor.map(Data_Map.functorMap)(Data_Functor.map(Data_Functor.functorArray)(Data_Profunctor_Strong.fanout(Control_Category.categoryFn)(Data_Profunctor_Strong.strongFn)(Control_Category.id(Control_Category.categoryFn))(placeScored(verscale))))(snps);
+            var npointed = Data_Functor.map(Data_Map.functorMap)(Data_Functor.map(Data_Functor.functorArray)(Data_Profunctor_Strong.fanout(Control_Category.categoryFn)(Data_Profunctor_Strong.strongFn)(Control_Category.id(Control_Category.categoryFn))(function (s) {
+                return {
+                    x: Genetics_Browser_Track_Backend.featureNormX(s),
+                    y: Data_Newtype.wrap(Genetics_Browser_Types_Coordinates.newtypeNormalized)(normYLogScore(verScale)(s.feature.score))
+                };
+            })))(snps);
             var pointed = function (segs) {
-                return Data_Foldable.fold(Data_Map.foldableMap)(Data_Monoid.monoidArray)(Genetics_Browser_Track_Backend.zipMapsWith(Genetics_Browser_Types.ordChrId)(function (s) {
-                    return function (p) {
-                        return Data_Functor.map(Data_Functor.functorArray)(Data_Functor.map(Data_Tuple.functorTuple)(rescale(s)))(p);
+                var f = function (chrId) {
+                    return function (seg) {
+                        return Data_Foldable.foldMap(Data_Foldable.foldableMaybe)(Data_Monoid.monoidArray)(Data_Functor.map(Data_Functor.functorArray)(Data_Functor.map(Data_Tuple.functorTuple)(rescale(seg))))(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(chrId)(npointed));
                     };
-                })(segs)(npointed));
+                };
+                return Data_FoldableWithIndex.foldMapWithIndex(Data_Map.foldableWithIndexMap)(Data_Monoid.monoidArray)(f)(segs);
             };
             var features = Data_Foldable.fold(Data_Map.foldableMap)(Data_Monoid.monoidArray)(snps);
             var drawing = (function () {
@@ -42876,43 +42625,13 @@ var renderGWAS = function (verscale) {
         };
     };
 };
-var renderGWASConfigable = function (verscale) {
-    return function (cdim) {
-        return function (snps) {
-            var r = renderGWAS(verscale)(cdim)(snps);
-            return function (segs) {
-                return function (v) {
-                    return r(segs);
-                };
-            };
-        };
-    };
-};
-var defaultAnnotRendererConfig = (function () {
-    var y = -15.0;
-    return {
-        tailHeight: 0.15,
-        tailWidth: 1.3,
-        tailColor: Color.black,
-        iconDY: -7.5,
-        labelDY: -10.0,
-        glyphOffset: {
-            x: 0.0,
-            y: y
-        },
-        offset: {
-            x: 0.0,
-            y: y
-        }
-    };
-})();
 var bedToFeature = function (cs) {
     return function (pl) {
-        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(cs)(function ($240) {
-            return Genetics_Browser_Types_Coordinates._Segments(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Index.ix(Data_Lens_Index.indexMap(Genetics_Browser_Types.ordChrId))(pl.chrom)(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))($240));
+        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(cs)(function ($142) {
+            return Genetics_Browser_Types_Coordinates._Segments(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Index.ix(Data_Lens_Index.indexMap(Genetics_Browser_Types.ordChrId))(pl.chrom)(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))($142));
         }))(function (v) {
-            var toBp = function ($241) {
-                return Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(Data_BigInt.toNumber($241));
+            var toBp = function ($143) {
+                return Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(Data_BigInt.toNumber($143));
             };
             var thickRange = Data_Functor.map(Data_Pair.functorPair)(toBp)(new Data_Pair.Pair(pl.thickStart, pl.thickEnd));
             var position = Data_Functor.map(Data_Pair.functorPair)(toBp)(new Data_Pair.Pair(pl.chromStart, pl.chromEnd));
@@ -42946,21 +42665,10 @@ var getGenes = function (cs) {
         });
     };
 };
-var produceGenes = function (cs) {
-    return function (url) {
-        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Genetics_Browser_Track_Bed.fetchForeignChunks(url))(function (v) {
-            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Control_Coroutine.transformProducer(Control_Monad_Aff.monadRecAff)(Control_Monad_Aff.parallelAff)(v)(Control_Coroutine.composeTransformers(Control_Monad_Aff.monadRecAff)(Control_Monad_Aff.parallelAff)(Genetics_Browser_Track_Bed.parsedLineTransformer)(Control_Coroutine.transform(Control_Monad_Aff.monadAff)(function ($242) {
-                return Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v1) {
-                    return v1.feature.chrId;
-                })(Data_Filterable.filterMap(Data_Filterable.filterableArray)(bedToFeature(cs))($242));
-            }))));
-        });
-    };
-};
 var bedDraw = function (gene) {
     return Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
         return "range";
-    }))(Genetics_Browser_Track_Backend._range)(function (w) {
+    }))(Data_Symbol.SProxy.value)(function (w) {
         var toLocal = function (x) {
             return w * Data_Newtype.unwrap(Genetics_Browser_Types.newtypeBp)(Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(x)(gene.frameSize));
         };
@@ -42978,8 +42686,8 @@ var bedDraw = function (gene) {
             return Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(Graphics_Drawing.outlined(Data_Semigroup.append(Graphics_Drawing.semigroupOutlineStyle)(Graphics_Drawing.outlineColor(Color_Scheme_X11.darkgrey))(Graphics_Drawing.lineWidth(1.0)))(s))(Graphics_Drawing.filled(Graphics_Drawing.fillColor(Color_Scheme_X11.lightgrey))(s));
         };
         var drawing = (function () {
-            var $156 = width < 1;
-            if ($156) {
+            var $90 = width < 1;
+            if ($90) {
                 return Data_Monoid.mempty(Data_Monoid.monoidFn(Graphics_Drawing.monoidDrawing));
             };
             return function (v) {
@@ -42999,11 +42707,11 @@ var geneRenderer = (function () {
         };
         return Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
             return "range";
-        }))(Genetics_Browser_Track_Backend._range)(Data_Functor.map(Data_Pair.functorPair)(f)(v.position));
+        }))(Data_Symbol.SProxy.value)(Data_Functor.map(Data_Pair.functorPair)(f)(v.position));
     };
     return Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
         return "single";
-    }))(Genetics_Browser_Track_Backend._single)({
+    }))(Data_Symbol.SProxy.value)({
         draw: bedDraw,
         horPlace: horPlace,
         verPlace: Data_Function["const"](0.1)
@@ -43016,7 +42724,7 @@ var annotationLegendEntry = function (a) {
     if (a.feature.gene instanceof Data_Maybe.Just) {
         return Genetics_Browser_Track_Backend.mkIcon(Color_Scheme_Clrs.red)("Gene name");
     };
-    throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 521, column 3 - line 526, column 1: " + [ a.feature.gene.constructor.name ]);
+    throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 382, column 3 - line 387, column 1: " + [ a.feature.gene.constructor.name ]);
 };
 var annotationLegendTest = function (dictFoldable) {
     return function (dictFunctor) {
@@ -43028,40 +42736,51 @@ var annotationLegendTest = function (dictFoldable) {
 };
 var renderAnnotation = function (cSys) {
     return function (sigSnps) {
-        return function (verscale) {
+        return function (vScale) {
             return function (cdim) {
                 return function (allAnnots) {
                     var tailPixels = 6.0e-2 * cdim.height;
-                    var overlaps = function (r) {
-                        return function (p) {
-                            return Data_Monoid.mempty(Data_Monoid.monoidArray);
-                        };
-                    };
-                    var labelOffset = -8.0;
-                    var iconYOffset = -6.5;
-                    var label = function (aPeak) {
-                        var y0 = (aPeak.y - tailPixels) + 4.0 * iconYOffset;
-                        var x = aPeak.covers.value0 + 0.5 * (aPeak.covers.value1 - aPeak.covers.value0);
-                        var f = function (a) {
-                            return function (v) {
-                                return Data_Tuple.Tuple.create(v.value0 + labelOffset)(Data_Array.snoc(v.value1)({
-                                    text: Data_Maybe.fromMaybe(a.feature.name)(a.feature.gene),
-                                    point: {
-                                        x: x,
-                                        y: v.value0
-                                    }
-                                }));
+                    var peakAnnots = function (v) {
+                        return function (snps) {
+                            return function (size) {
+                                return function (annots) {
+                                    return function (pk) {
+                                        var y = cdim.height * (1 - normYLogScore(vScale)(pk.y));
+                                        var elements = Data_Filterable.filter(Data_Filterable.filterableArray)(function ($144) {
+                                            return Genetics_Browser_Types_Coordinates.pairsOverlap(Genetics_Browser_Types.ordBp)(pk.covers)((function (v1) {
+                                                return v1.position;
+                                            })($144));
+                                        })(annots);
+                                        var covers = Data_Functor.map(Data_Pair.functorPair)(function (x) {
+                                            return v.value0 + Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(v) * Data_Newtype.unwrap(Genetics_Browser_Types.newtypeBp)(Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(x)(size));
+                                        })(pk.covers);
+                                        return {
+                                            covers: covers,
+                                            y: y,
+                                            elements: elements
+                                        };
+                                    };
+                                };
                             };
                         };
-                        return Data_Tuple.snd(Data_Foldable.foldr(Data_Foldable.foldableArray)(f)(new Data_Tuple.Tuple(y0, Data_Monoid.mempty(Data_Monoid.monoidArray)))(aPeak.elements));
                     };
-                    var labels = Data_Foldable.foldMap(Data_Map.foldableMap)(Data_Monoid.monoidArray)(Data_Foldable.foldMap(Data_Foldable.foldableArray)(Data_Monoid.monoidArray)(label));
                     var features = Data_Foldable.fold(Data_Map.foldableMap)(Data_Monoid.monoidArray)(allAnnots);
-                    var drawing = function (aPeak) {
+                    var drawingCovers = function (aPeak) {
+                        var gH = 11.0 - 6.5;
+                        var h = tailPixels + gH * Data_Foldable.length(Data_Foldable.foldableArray)(Data_Semiring.semiringNumber)(aPeak.elements);
+                        var y = aPeak.y - h;
+                        return {
+                            x: aPeak.covers.value0,
+                            y: y,
+                            w: 14.0,
+                            h: h
+                        };
+                    };
+                    var drawAndLabel = function (aPeak) {
                         var x = aPeak.covers.value0 + 0.5 * (aPeak.covers.value1 - aPeak.covers.value0);
                         var tail = (function () {
-                            var $172 = Data_Array["null"](aPeak.elements);
-                            if ($172) {
+                            var $109 = Data_Array["null"](aPeak.elements);
+                            if ($109) {
                                 return Data_Monoid.mempty(Graphics_Drawing.monoidDrawing);
                             };
                             return Graphics_Drawing.outlined(Data_Semigroup.append(Graphics_Drawing.semigroupOutlineStyle)(Graphics_Drawing.lineWidth(1.3))(Graphics_Drawing.outlineColor(Color.black)))(Graphics_Drawing.path(Data_Foldable.foldableArray)([ {
@@ -43072,54 +42791,62 @@ var renderAnnotation = function (cSys) {
                                 y: -tailPixels
                             } ]));
                         })();
-                        var icon$prime = function ($243) {
-                            return (function (v) {
-                                return v.icon;
-                            })(annotationLegendEntry($243));
-                        };
                         var icons = Graphics_Drawing.translate(0.0)(-tailPixels)(Data_Foldable.foldr(Data_Foldable.foldableArray)(function (a) {
                             return function (d) {
-                                return Graphics_Drawing.translate(0.0)(iconYOffset)(Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(icon$prime(a))(d));
+                                return Graphics_Drawing.translate(0.0)(-6.5)(Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)((annotationLegendEntry(a)).icon)(d));
                             };
                         })(Data_Monoid.mempty(Graphics_Drawing.monoidDrawing))(aPeak.elements));
-                        return {
+                        var labelsHeight = Data_Foldable.length(Data_Foldable.foldableArray)(Data_Semiring.semiringNumber)(aPeak.elements) * 14.0;
+                        var drawing = {
                             drawing: Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(tail)(icons),
                             points: [ {
                                 x: x,
                                 y: aPeak.y
                             } ]
                         };
+                        var dC = drawingCovers(aPeak);
+                        var v = (function () {
+                            var $110 = dC.y > labelsHeight;
+                            if ($110) {
+                                return {
+                                    g: Genetics_Browser_Track_UI_Canvas.LCenter.value,
+                                    y0: dC.y
+                                };
+                            };
+                            return {
+                                g: Genetics_Browser_Track_UI_Canvas.LLeft.value,
+                                y0: aPeak.y
+                            };
+                        })();
+                        var f = function (a) {
+                            return function (v1) {
+                                return Data_Tuple.Tuple.create(v1.value0 - 8.0)(Data_Array.snoc(v1.value1)({
+                                    text: Data_Maybe.fromMaybe(a.feature.name)(a.feature.gene),
+                                    point: {
+                                        x: x,
+                                        y: v1.value0
+                                    },
+                                    gravity: v.g
+                                }));
+                            };
+                        };
+                        var label = Data_Tuple.snd(Data_Foldable.foldr(Data_Foldable.foldableArray)(f)(new Data_Tuple.Tuple(v.y0, Data_Monoid.mempty(Data_Monoid.monoidArray)))(aPeak.elements));
+                        return new Data_Tuple.Tuple([ drawing ], label);
                     };
-                    var drawings = Data_Foldable.foldMap(Data_Map.foldableMap)(Data_Monoid.monoidArray)(Data_Functor.map(Data_Functor.functorArray)(drawing));
+                    var drawAndLabelAll = function (pks) {
+                        return Data_Foldable.foldMap(Data_Map.foldableMap)(Data_Tuple.monoidTuple(Data_Monoid.monoidArray)(Data_Monoid.monoidArray))(Data_Foldable.foldMap(Data_Foldable.foldableArray)(Data_Tuple.monoidTuple(Data_Monoid.monoidArray)(Data_Monoid.monoidArray))(drawAndLabel))(pks);
+                    };
                     var curAnnotPeaks = (function () {
                         var f = function (chr) {
                             return function (seg) {
                                 return Data_Maybe.fromMaybe([  ])(Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(chr)(sigSnps))(function (v) {
-                                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(function (v1) {
-                                        return v1.frameSize;
-                                    })(Data_Array.head(v)))(function (v1) {
-                                        var rad = Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(Data_Semiring.mul(Genetics_Browser_Types.semiringBp)(Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(3.75))(v1))(Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(seg)));
-                                        var snpPeaks = Debug_Trace.trace(Debug_Trace.warn())("radius: " + Data_Show.show(Genetics_Browser_Types.showBp)(rad))(function (v2) {
-                                            return peaks(rad)(v);
+                                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(chr)(allAnnots))(function (v1) {
+                                        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(function (v2) {
+                                            return v2.frameSize;
+                                        })(Data_Array.head(v)))(function (v2) {
+                                            var rad = Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(Data_Semiring.mul(Genetics_Browser_Types.semiringBp)(Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(3.75))(v2))(Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(seg)));
+                                            return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(Data_Functor.map(Data_Functor.functorArray)(peakAnnots(seg)(v)(v2)(v1))(peaks(rad)(v)));
                                         });
-                                        var peakAnnots = function (pk) {
-                                            var y = cdim.height * (1 - Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.newtypeNormalized)(normalizedY(verscale)(pk.y)));
-                                            var offset = Data_Pair.fst(seg);
-                                            var elements = Data_Maybe.fromMaybe([  ])(Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(chr)(allAnnots))(function (v2) {
-                                                return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(Data_Filterable.filter(Data_Filterable.filterableArray)(function (a) {
-                                                    return Genetics_Browser_Types_Coordinates.pairsOverlap(Genetics_Browser_Types.ordBp)(a.position)(pk.covers);
-                                                })(v2));
-                                            }));
-                                            var covers = Data_Functor.map(Data_Pair.functorPair)(function (x) {
-                                                return offset + Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(seg) * Data_Newtype.unwrap(Genetics_Browser_Types.newtypeBp)(Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(x)(v1));
-                                            })(pk.covers);
-                                            return {
-                                                covers: covers,
-                                                y: y,
-                                                elements: elements
-                                            };
-                                        };
-                                        return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(Data_Functor.map(Data_Functor.functorArray)(peakAnnots)(snpPeaks));
                                     });
                                 }));
                             };
@@ -43127,27 +42854,16 @@ var renderAnnotation = function (cSys) {
                         return Data_FunctorWithIndex.mapWithIndex(Data_Map.functorWithIndexMap)(f);
                     })();
                     return function (segs) {
-                        var curPeaks = curAnnotPeaks(segs);
+                        var v = drawAndLabelAll(curAnnotPeaks(segs));
                         return {
                             features: features,
-                            drawings: drawings(curPeaks),
-                            labels: labels(curPeaks),
-                            overlaps: overlaps
+                            drawings: v.value0,
+                            labels: v.value1,
+                            overlaps: Data_Monoid.mempty(Data_Monoid.monoidFn(Data_Monoid.monoidFn(Data_Monoid.monoidArray)))
                         };
                     };
                 };
             };
-        };
-    };
-};
-var annotationForSnp = function (radius) {
-    return function (annotations) {
-        return function (v) {
-            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(v.feature.chrId)(annotations))(function (v1) {
-                return Data_Foldable.find(Data_Foldable.foldableArray)(function (a) {
-                    return Genetics_Browser_Types_Coordinates.pairsOverlap(Genetics_Browser_Types.ordBp)(Genetics_Browser_Types_Coordinates.aroundPair(Genetics_Browser_Types.ringBp)(radius)(a.position))(v.position);
-                })(v1);
-            });
         };
     };
 };
@@ -43221,7 +42937,7 @@ var parseAnnotation = function (cSys) {
                     if (v2 instanceof Data_Maybe.Just) {
                         return Control_Applicative.pure(Control_Monad_Except_Trans.applicativeExceptT(Data_Identity.monadIdentity))(Genetics_Browser_Types.Bp(Data_BigInt.toNumber(Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)(v2.value0))));
                     };
-                    throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 320, column 16 - line 327, column 49: " + [ v2.constructor.name ]);
+                    throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 255, column 16 - line 262, column 49: " + [ v2.constructor.name ]);
                 })())(function (v2) {
                     return Control_Applicative.pure(Control_Monad_Except_Trans.applicativeExceptT(Data_Identity.monadIdentity))({
                         position: position,
@@ -43233,7 +42949,7 @@ var parseAnnotation = function (cSys) {
         });
     };
 };
-var getAnnotationsNew = function (cs) {
+var getAnnotations = function (cs) {
     return function (url) {
         return Control_Bind.bind(Control_Monad_Aff.bindAff)(Network_HTTP_Affjax.get(Network_HTTP_Affjax_Response.responsableForeign)(url))(function (v) {
             return Control_Bind.bind(Control_Monad_Aff.bindAff)((function () {
@@ -43244,10 +42960,10 @@ var getAnnotationsNew = function (cs) {
                 if (v1 instanceof Data_Either.Right) {
                     return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(v1.value0);
                 };
-                throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 390, column 16 - line 393, column 37: " + [ v1.constructor.name ]);
+                throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 322, column 16 - line 325, column 37: " + [ v1.constructor.name ]);
             })())(function (v1) {
-                var parsed = Data_Filterable.partitionMap(Data_Filterable.filterableArray)(function ($244) {
-                    return Control_Monad_Except.runExcept(parseAnnotation(cs)($244));
+                var parsed = Data_Filterable.partitionMap(Data_Filterable.filterableArray)(function ($145) {
+                    return Control_Monad_Except.runExcept(parseAnnotation(cs)($145));
                 })(v1);
                 return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
                     Control_Monad_Eff_Console.log("Raw annotations array length: " + Data_Show.show(Data_Show.showInt)(Data_Array.length(v1)))();
@@ -43268,7 +42984,7 @@ var getAnnotationsNew = function (cs) {
                                 })(showAnnotation(v2.value0))))();
                             });
                         };
-                        throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 411, column 3 - line 415, column 62: " + [ v2.constructor.name ]);
+                        throw new Error("Failed pattern match at Genetics.Browser.Track.Demo line 343, column 3 - line 347, column 62: " + [ v2.constructor.name ]);
                     })())(function () {
                         return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v2) {
                             return v2.feature.chr;
@@ -43279,374 +42995,34 @@ var getAnnotationsNew = function (cs) {
         });
     };
 };
-var annotLegendEntry = function (a) {
-    var $197 = Data_String.length(a.feature.name) % 2 === 0;
-    if ($197) {
-        return Genetics_Browser_Track_Backend.mkIcon(Color_Scheme_Clrs.blue)("even name");
-    };
-    return Genetics_Browser_Track_Backend.mkIcon(Color_Scheme_Clrs.red)("odd name");
-};
-var annotLegendTest = function (dictFoldable) {
-    return function (dictFunctor) {
-        return function (fs) {
-            var as = Data_Array.concat(Data_Array.fromFoldable(Data_List_Types.foldableList)(Data_Functor.map(Data_List_Types.functorList)(Data_Array.fromFoldable(dictFoldable))(Data_Map.values(fs))));
-            return Genetics_Browser_Track_Backend.trackLegend(Data_Foldable.foldableArray)(Data_Functor.functorArray)(annotLegendEntry)(as);
-        };
-    };
-};
-var renderAnnot = function (cSys) {
-    return function (sigSnps) {
-        return function (verscale) {
-            return function (cdim) {
-                return function (allAnnots) {
-                    var tailPixels = 8.0e-2 * cdim.height;
-                    var overlaps = function (r) {
-                        return function (p) {
-                            return Data_Monoid.mempty(Data_Monoid.monoidArray);
-                        };
-                    };
-                    var labelOffset = -10.0;
-                    var iconYOffset = -7.5;
-                    var label = function (aPeak) {
-                        var x = aPeak.covers.value0 + 0.5 * (aPeak.covers.value1 - aPeak.covers.value0);
-                        var f = function (a) {
-                            return function (v) {
-                                return Data_Tuple.Tuple.create(v.value0 + iconYOffset)(Data_Array.snoc(v.value1)({
-                                    text: a.feature.name,
-                                    point: {
-                                        x: x,
-                                        y: v.value0
-                                    }
-                                }));
-                            };
-                        };
-                        return Data_Tuple.snd(Data_Foldable.foldr(Data_Foldable.foldableArray)(f)(new Data_Tuple.Tuple(aPeak.y - 2.5 * tailPixels, Data_Monoid.mempty(Data_Monoid.monoidArray)))(aPeak.elements));
-                    };
-                    var labels = Data_Foldable.foldMap(Data_Map.foldableMap)(Data_Monoid.monoidArray)(Data_Foldable.foldMap(Data_Foldable.foldableArray)(Data_Monoid.monoidArray)(label));
-                    var features = Data_Foldable.fold(Data_Map.foldableMap)(Data_Monoid.monoidArray)(allAnnots);
-                    var drawing = function (aPeak) {
-                        var x = aPeak.covers.value0 + 0.5 * (aPeak.covers.value1 - aPeak.covers.value0);
-                        var tail = (function () {
-                            var $206 = Data_Array["null"](aPeak.elements);
-                            if ($206) {
-                                return Data_Monoid.mempty(Graphics_Drawing.monoidDrawing);
-                            };
-                            return Graphics_Drawing.outlined(Data_Semigroup.append(Graphics_Drawing.semigroupOutlineStyle)(Graphics_Drawing.lineWidth(1.3))(Graphics_Drawing.outlineColor(Color.black)))(Graphics_Drawing.path(Data_Foldable.foldableArray)([ {
-                                x: 0.0,
-                                y: 0.0
-                            }, {
-                                x: 0.0,
-                                y: tailPixels
-                            } ]));
-                        })();
-                        var icon$prime = function ($245) {
-                            return (function (v) {
-                                return v.icon;
-                            })(annotLegendEntry($245));
-                        };
-                        var icons = Data_Foldable.foldr(Data_Foldable.foldableArray)(function (a) {
-                            return function (d) {
-                                return Graphics_Drawing.translate(0.0)(iconYOffset)(Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(d)(icon$prime(a)));
-                            };
-                        })(Data_Monoid.mempty(Graphics_Drawing.monoidDrawing))(aPeak.elements);
-                        return {
-                            drawing: Graphics_Drawing.translate(0.0)(-15.0)(Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(tail)(icons)),
-                            points: [ {
-                                x: x,
-                                y: aPeak.y - tailPixels * 0.8
-                            } ]
-                        };
-                    };
-                    var drawings = Data_Foldable.foldMap(Data_Map.foldableMap)(Data_Monoid.monoidArray)(Data_Functor.map(Data_Functor.functorArray)(drawing));
-                    var curAnnotPeaks = (function () {
-                        var f = function (chr) {
-                            return function (seg) {
-                                return Data_Maybe.fromMaybe([  ])(Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(chr)(sigSnps))(function (v) {
-                                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(function (v1) {
-                                        return v1.frameSize;
-                                    })(Data_Array.head(v)))(function (v1) {
-                                        var rad = Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(seg) * 3.75))(v1);
-                                        var snpPeaks = peaks(rad)(v);
-                                        var peakAnnots = function (pk) {
-                                            var y = cdim.height * (1 - Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.newtypeNormalized)(normalizedY(verscale)(pk.y)));
-                                            var offset = Data_Pair.fst(seg);
-                                            var elements = Data_Maybe.fromMaybe([  ])(Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(chr)(allAnnots))(function (v2) {
-                                                return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(Data_Filterable.filter(Data_Filterable.filterableArray)(function (a) {
-                                                    return Genetics_Browser_Types_Coordinates.pairsOverlap(Genetics_Browser_Types.ordBp)(a.position)(pk.covers);
-                                                })(v2));
-                                            }));
-                                            var covers = Data_Functor.map(Data_Pair.functorPair)(function (x) {
-                                                return offset + Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(seg) * Data_Newtype.unwrap(Genetics_Browser_Types.newtypeBp)(Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(x)(v1));
-                                            })(pk.covers);
-                                            return {
-                                                covers: covers,
-                                                y: y,
-                                                elements: elements
-                                            };
-                                        };
-                                        return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(Data_Functor.map(Data_Functor.functorArray)(peakAnnots)(snpPeaks));
-                                    });
-                                }));
-                            };
-                        };
-                        return Data_FunctorWithIndex.mapWithIndex(Data_Map.functorWithIndexMap)(f);
-                    })();
-                    return function (segs) {
-                        var curPeaks = curAnnotPeaks(segs);
-                        var aa = Debug_Trace.trace(Debug_Trace.warn())("#curPeaks: " + Data_Show.show(Data_Show.showInt)(Data_Foldable.sum(Data_Map.foldableMap)(Data_Semiring.semiringInt)(Data_Functor.map(Data_Map.functorMap)(Data_Array.length)(curPeaks))))(function (v) {
-                            return Data_Unit.unit;
-                        });
-                        return {
-                            features: features,
-                            drawings: drawings(curPeaks),
-                            labels: labels(curPeaks),
-                            overlaps: overlaps
-                        };
-                    };
-                };
-            };
-        };
-    };
-};
-var renderAnnotConfigable = function (cSys) {
-    return function (sigSnps) {
-        return function (verscale) {
-            return function (cdim) {
-                return function (allAnnots) {
-                    var overlaps = function (r) {
-                        return function (p) {
-                            return Data_Monoid.mempty(Data_Monoid.monoidArray);
-                        };
-                    };
-                    var label = function (c) {
-                        return function (aPeak) {
-                            var x = aPeak.covers.value0 + 0.5 * (aPeak.covers.value1 - aPeak.covers.value0);
-                            var tailPixels = c.tailHeight * cdim.height;
-                            var f = function (a) {
-                                return function (v) {
-                                    return Data_Tuple.Tuple.create(v.value0 + c.labelDY)(Data_Array.snoc(v.value1)({
-                                        text: a.feature.name,
-                                        point: {
-                                            x: x,
-                                            y: v.value0
-                                        }
-                                    }));
-                                };
-                            };
-                            return Data_Tuple.snd(Data_Foldable.foldr(Data_Foldable.foldableArray)(f)(new Data_Tuple.Tuple(aPeak.y - 2.5 * tailPixels, Data_Monoid.mempty(Data_Monoid.monoidArray)))(aPeak.elements));
-                        };
-                    };
-                    var labels = function (c) {
-                        return Data_Foldable.foldMap(Data_Map.foldableMap)(Data_Monoid.monoidArray)(Data_Foldable.foldMap(Data_Foldable.foldableArray)(Data_Monoid.monoidArray)(label(c)));
-                    };
-                    var features = Data_Foldable.fold(Data_Map.foldableMap)(Data_Monoid.monoidArray)(allAnnots);
-                    var drawing = function (c) {
-                        return function (aPeak) {
-                            var x = aPeak.covers.value0 + 0.5 * (aPeak.covers.value1 - aPeak.covers.value0);
-                            var tailPixels = c.tailHeight * cdim.height;
-                            var tail = (function () {
-                                var $220 = Data_Array["null"](aPeak.elements);
-                                if ($220) {
-                                    return Data_Monoid.mempty(Graphics_Drawing.monoidDrawing);
-                                };
-                                return Graphics_Drawing.outlined(Data_Semigroup.append(Graphics_Drawing.semigroupOutlineStyle)(Graphics_Drawing.lineWidth(c.tailWidth))(Graphics_Drawing.outlineColor(c.tailColor)))(Graphics_Drawing.path(Data_Foldable.foldableArray)([ {
-                                    x: 0.0,
-                                    y: 0.0
-                                }, {
-                                    x: 0.0,
-                                    y: tailPixels
-                                } ]));
-                            })();
-                            var icon$prime = function ($246) {
-                                return (function (v) {
-                                    return v.icon;
-                                })(annotLegendEntry($246));
-                            };
-                            var icons = Data_Foldable.foldr(Data_Foldable.foldableArray)(function (a) {
-                                return function (d) {
-                                    return Graphics_Drawing.translate(0.0)(c.iconDY)(Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(d)(icon$prime(a)));
-                                };
-                            })(Data_Monoid.mempty(Graphics_Drawing.monoidDrawing))(aPeak.elements);
-                            return {
-                                drawing: Graphics_Drawing.translate(c.glyphOffset.x)(c.glyphOffset.y)(Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(tail)(icons)),
-                                points: [ {
-                                    x: x - c.offset.x,
-                                    y: aPeak.y - c.offset.y
-                                } ]
-                            };
-                        };
-                    };
-                    var drawings = function (c) {
-                        return Data_Foldable.foldMap(Data_Map.foldableMap)(Data_Monoid.monoidArray)(Data_Functor.map(Data_Functor.functorArray)(drawing(c)));
-                    };
-                    var curAnnotPeaks = (function () {
-                        var f = function (chr) {
-                            return function (seg) {
-                                return Data_Maybe.fromMaybe([  ])(Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(chr)(sigSnps))(function (v) {
-                                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(function (v1) {
-                                        return v1.frameSize;
-                                    })(Data_Array.head(v)))(function (v1) {
-                                        var rad = Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(seg) * 3.75))(v1);
-                                        var snpPeaks = peaks(rad)(v);
-                                        var peakAnnots = function (pk) {
-                                            var y = cdim.height * (1 - Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.newtypeNormalized)(normalizedY(verscale)(pk.y)));
-                                            var offset = Data_Pair.fst(seg);
-                                            var elements = Data_Maybe.fromMaybe([  ])(Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(chr)(allAnnots))(function (v2) {
-                                                return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(Data_Filterable.filter(Data_Filterable.filterableArray)(function (a) {
-                                                    return Genetics_Browser_Types_Coordinates.pairsOverlap(Genetics_Browser_Types.ordBp)(a.position)(pk.covers);
-                                                })(v2));
-                                            }));
-                                            var covers = Data_Functor.map(Data_Pair.functorPair)(function (x) {
-                                                return offset + Genetics_Browser_Types_Coordinates.pairSize(Data_Ring.ringNumber)(seg) * Data_Newtype.unwrap(Genetics_Browser_Types.newtypeBp)(Data_EuclideanRing.div(Genetics_Browser_Types.euclideanRingBp)(x)(v1));
-                                            })(pk.covers);
-                                            return {
-                                                covers: covers,
-                                                y: y,
-                                                elements: elements
-                                            };
-                                        };
-                                        return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(Data_Functor.map(Data_Functor.functorArray)(peakAnnots)(snpPeaks));
-                                    });
-                                }));
-                            };
-                        };
-                        return Data_FunctorWithIndex.mapWithIndex(Data_Map.functorWithIndexMap)(f);
-                    })();
-                    return function (segs) {
-                        var curPeaks = curAnnotPeaks(segs);
-                        var aa = Debug_Trace.trace(Debug_Trace.warn())("#curPeaks: " + Data_Show.show(Data_Show.showInt)(Data_Foldable.sum(Data_Map.foldableMap)(Data_Semiring.semiringInt)(Data_Functor.map(Data_Map.functorMap)(Data_Array.length)(curPeaks))))(function (v) {
-                            return Data_Unit.unit;
-                        });
-                        return function (c) {
-                            return {
-                                features: features,
-                                drawings: drawings(c)(curPeaks),
-                                labels: labels(c)(curPeaks),
-                                overlaps: overlaps
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
-};
-var annotJSONParse = function (cs) {
-    return function (j) {
-        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(j)(Data_Argonaut_Prisms._Object(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))))(function (v) {
-            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($247) {
-                return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene stable ID")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($247));
-            }))(function (v1) {
-                return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($248) {
-                    return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene description")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($248));
-                }))(function (v2) {
-                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Lens_Fold.previewOn(v)(function ($249) {
-                        return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene name")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($249));
-                    }))(function (v3) {
-                        return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.Bp)(Data_Lens_Fold.previewOn(v)(function ($250) {
-                            return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene start (bp)")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($250));
-                        })))(function (v4) {
-                            return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.Bp)(Data_Lens_Fold.previewOn(v)(function ($251) {
-                                return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("Gene end (bp)")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._Number(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($251));
-                            })))(function (v5) {
-                                return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Types.ChrId)(Data_Lens_Fold.previewOn(v)(function ($252) {
-                                    return Data_Lens_Index.ix(Data_Lens_Index.indexStrMap)("ChrId")(Data_Lens_Internal_Forget.wanderForget(Data_Maybe_First.monoidFirst))(Data_Argonaut_Prisms._String(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))($252));
-                                })))(function (v6) {
-                                    return Control_Bind.bind(Data_Maybe.bindMaybe)(Data_Functor.map(Data_Maybe.functorMaybe)(function ($253) {
-                                        return Genetics_Browser_Types.Bp(Data_BigInt.toNumber(Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)($253)));
-                                    })(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(v6)(Data_Lens_Getter.view(Genetics_Browser_Types_Coordinates._Segments(Data_Lens_Internal_Forget.strongForget))(cs))))(function (v7) {
-                                        return Control_Applicative.pure(Data_Maybe.applicativeMaybe)({
-                                            position: new Data_Pair.Pair(v4, v5),
-                                            frameSize: v7,
-                                            feature: {
-                                                geneID: v1,
-                                                desc: v2,
-                                                name: v3,
-                                                chrId: v6
-                                            }
-                                        });
-                                    });
-                                });
-                            });
-                        });
-                    });
-                });
-            });
-        });
-    };
-};
-var fetchAnnotJSON = function (cs) {
-    return function (str) {
-        return fetchJSON(annotJSONParse(cs))(str);
-    };
-};
-var getAnnotations = function (cs) {
-    return function (url) {
-        return Data_Functor.map(Control_Monad_Aff.functorAff)(Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v) {
-            return v.feature.chrId;
-        }))(fetchAnnotJSON(cs)(url));
-    };
-};
-var getAnnotations$prime = function (cs) {
-    return function (snps) {
-        return function (url) {
-            return Data_Functor.map(Control_Monad_Aff.functorAff)(Data_Functor.map(Data_Functor.functorFn)(Genetics_Browser_Track_Backend.groupToMap(Data_Monoid.monoidArray)(Genetics_Browser_Types.ordChrId)(Data_Foldable.foldableArray)(Control_Applicative.applicativeArray)(function (v) {
-                return v.feature.chrId;
-            }))(interestingAnnots(Data_Filterable.filterableArray)(50000.0)(snps)))(fetchAnnotJSON(cs)(url));
-        };
-    };
-};
-var produceAnnots = function (cs) {
-    return function (url) {
-        return featureProd(url)(annotJSONParse(cs));
-    };
-};
 module.exports = {
     bedToFeature: bedToFeature,
     getGenes: getGenes,
-    produceGenes: produceGenes,
     bedDraw: bedDraw,
     geneRenderer: geneRenderer,
     fetchJsonChunks: fetchJsonChunks,
     featureProd: featureProd,
-    produceGWAS: produceGWAS,
-    produceAnnots: produceAnnots,
-    fetchJSON: fetchJSON,
-    gemmaJSONParse: gemmaJSONParse,
-    annotJSONParse: annotJSONParse,
-    fetchAnnotJSON: fetchAnnotJSON,
+    parseSNP: parseSNP,
     annotationFields: annotationFields,
     parseAnnotation: parseAnnotation,
     parseAnnotationRest: parseAnnotationRest,
+    showAnnotationField: showAnnotationField,
     showAnnotation: showAnnotation,
-    getGWAS: getGWAS,
+    getSNPs: getSNPs,
     getAnnotations: getAnnotations,
-    "getAnnotations'": getAnnotations$prime,
-    getAnnotationsNew: getAnnotationsNew,
-    inRangeOf: inRangeOf,
-    interestingAnnots: interestingAnnots,
-    "peak'": peak$prime,
     peak1: peak1,
     peaks: peaks,
-    visiblePeaks: visiblePeaks,
-    annotLegendEntry: annotLegendEntry,
-    annotLegendTest: annotLegendTest,
     annotationLegendEntry: annotationLegendEntry,
     annotationLegendTest: annotationLegendTest,
     placeScored: placeScored,
-    normalizedY: normalizedY,
+    normYLogScore: normYLogScore,
     dist: dist,
     filterSig: filterSig,
-    renderGWASConfigable: renderGWASConfigable,
-    renderGWAS: renderGWAS,
-    annotationForSnp: annotationForSnp,
-    renderAnnot: renderAnnot,
-    renderAnnotation: renderAnnotation,
-    defaultAnnotRendererConfig: defaultAnnotRendererConfig,
-    renderAnnotConfigable: renderAnnotConfigable
+    renderSNPs: renderSNPs,
+    renderAnnotation: renderAnnotation
 };
 
-},{"../Color":5,"../Color.Scheme.Clrs":3,"../Color.Scheme.X11":4,"../Control.Applicative":8,"../Control.Bind":14,"../Control.Category":15,"../Control.Coroutine":18,"../Control.Monad.Aff":26,"../Control.Monad.Eff":46,"../Control.Monad.Eff.Class":31,"../Control.Monad.Eff.Console":33,"../Control.Monad.Eff.Exception":36,"../Control.Monad.Error.Class":47,"../Control.Monad.Except":49,"../Control.Monad.Except.Trans":48,"../Control.Semigroupoid":74,"../Data.Argonaut":119,"../Data.Argonaut.Prisms":117,"../Data.Array":124,"../Data.BigInt":134,"../Data.Boolean":136,"../Data.Either":146,"../Data.Eq":149,"../Data.EuclideanRing":151,"../Data.Filterable":154,"../Data.Foldable":156,"../Data.Foreign":169,"../Data.Foreign.Index":160,"../Data.Foreign.Keys":165,"../Data.Function":173,"../Data.Functor":179,"../Data.FunctorWithIndex":181,"../Data.HeytingAlgebra":188,"../Data.Identity":189,"../Data.Lens":224,"../Data.Lens.Fold":197,"../Data.Lens.Getter":198,"../Data.Lens.Index":200,"../Data.Lens.Internal.Forget":203,"../Data.List":229,"../Data.List.Types":228,"../Data.Map":230,"../Data.Maybe":233,"../Data.Maybe.First":231,"../Data.Monoid":242,"../Data.Newtype":244,"../Data.Ord":253,"../Data.Pair":255,"../Data.Profunctor.Strong":262,"../Data.Record":269,"../Data.Record.Builder":265,"../Data.Record.Extra":266,"../Data.Ring":271,"../Data.Semigroup":275,"../Data.Semiring":277,"../Data.Show":280,"../Data.String":291,"../Data.Symbol":292,"../Data.Traversable":297,"../Data.Tuple":299,"../Data.Unfoldable":301,"../Data.Unit":303,"../Data.Variant":306,"../Debug.Trace":309,"../Genetics.Browser.Track.Backend":310,"../Genetics.Browser.Track.Bed":311,"../Genetics.Browser.Types":318,"../Genetics.Browser.Types.Coordinates":317,"../Graphics.Canvas":324,"../Graphics.Drawing":326,"../Graphics.Drawing.Font":325,"../Math":328,"../Network.HTTP.Affjax":332,"../Network.HTTP.Affjax.Response":330,"../Prelude":340,"../Simple.JSON":341,"../Type.Prelude":350,"../Type.Row":352,"../Unsafe.Coerce":354}],313:[function(require,module,exports){
+},{"../Color":5,"../Color.Scheme.Clrs":3,"../Color.Scheme.X11":4,"../Control.Applicative":8,"../Control.Bind":14,"../Control.Category":15,"../Control.Coroutine":18,"../Control.Monad.Aff":26,"../Control.Monad.Eff":46,"../Control.Monad.Eff.Class":31,"../Control.Monad.Eff.Console":33,"../Control.Monad.Eff.Exception":36,"../Control.Monad.Error.Class":47,"../Control.Monad.Except":49,"../Control.Monad.Except.Trans":48,"../Control.Semigroupoid":74,"../Data.Argonaut":119,"../Data.Argonaut.Prisms":117,"../Data.Array":124,"../Data.BigInt":134,"../Data.Boolean":136,"../Data.Either":146,"../Data.Eq":149,"../Data.EuclideanRing":151,"../Data.Filterable":154,"../Data.Foldable":156,"../Data.FoldableWithIndex":157,"../Data.Foreign":169,"../Data.Foreign.Index":160,"../Data.Foreign.Keys":165,"../Data.Function":173,"../Data.Functor":179,"../Data.FunctorWithIndex":181,"../Data.Identity":189,"../Data.Lens":224,"../Data.Lens.Fold":197,"../Data.Lens.Getter":198,"../Data.Lens.Index":200,"../Data.Lens.Internal.Forget":203,"../Data.Lens.Internal.Re":207,"../Data.Lens.Iso":213,"../Data.List":229,"../Data.List.Types":228,"../Data.Map":230,"../Data.Maybe":233,"../Data.Maybe.First":231,"../Data.Monoid":242,"../Data.Newtype":244,"../Data.Ord":253,"../Data.Pair":255,"../Data.Profunctor.Strong":262,"../Data.Record.Builder":265,"../Data.Record.Extra":266,"../Data.Ring":271,"../Data.Semigroup":275,"../Data.Semiring":277,"../Data.Show":280,"../Data.Symbol":292,"../Data.Traversable":297,"../Data.Tuple":299,"../Data.Unfoldable":301,"../Data.Unit":303,"../Data.Variant":306,"../Debug.Trace":309,"../Genetics.Browser.Track.Backend":310,"../Genetics.Browser.Track.Bed":311,"../Genetics.Browser.Track.UI.Canvas":314,"../Genetics.Browser.Types":318,"../Genetics.Browser.Types.Coordinates":317,"../Graphics.Canvas":324,"../Graphics.Drawing":326,"../Graphics.Drawing.Font":325,"../Math":328,"../Network.HTTP.Affjax":332,"../Network.HTTP.Affjax.Response":330,"../Prelude":340,"../Simple.JSON":341,"../Type.Prelude":350,"../Type.Row":352,"../Unsafe.Coerce":354}],313:[function(require,module,exports){
 "use strict";
 
 exports.createCanvas = function(size) {
@@ -43792,9 +43168,7 @@ exports.debugBrowserCanvas = function(k) {
 };
 
 },{}],314:[function(require,module,exports){
-
-// | This module provides a HTML5 canvas interface for the genetics browser,
-// | which wraps and optimizes all rendering calls
+// Generated by purs version 0.11.7
 "use strict";
 var $foreign = require("./foreign");
 var Control_Applicative = require("../Control.Applicative");
@@ -43839,36 +43213,36 @@ var Graphics_Drawing = require("../Graphics.Drawing");
 var Graphics_Drawing_Font = require("../Graphics.Drawing.Font");
 var Prelude = require("../Prelude");
 var Unsafe_Coerce = require("../Unsafe.Coerce");
+var LLeft = (function () {
+    function LLeft() {
 
-// TODO the back canvas should have the option of being bigger than
-// the front, to minimize redrawing
-// needs adding the offset of the front canvas, and validating that back >= front
+    };
+    LLeft.value = new LLeft();
+    return LLeft;
+})();
+var LCenter = (function () {
+    function LCenter() {
+
+    };
+    LCenter.value = new LCenter();
+    return LCenter;
+})();
+var LRight = (function () {
+    function LRight() {
+
+    };
+    LRight.value = new LRight();
+    return LRight;
+})();
 var BufferedCanvas = function (x) {
     return x;
 };
-
-// | The `width` & `height` of the TrackCanvas is the area glyphs render to;
-// | the browser shows a `width` pixels slice of the whole coordinate system.
-// | `glyphBuffer` is what individual glyphs can be rendered to and copied from, for speed.
 var TrackCanvas = function (x) {
     return x;
 };
-
-// | A `BrowserCanvas` consists of a double-buffered `track`
-// | which is what the genetics browser view is rendered onto,
-// | and a transparent `staticOverlay` canvas the UI is rendered onto,
-// | with a (also transparent) `trackOverlay` that scrolls with the track view.
-// | The `dimensions`, `trackPadding`, and track.width/height are
-// | related such that
-// | track.width + horizontal.left + horizontal.right = dimensions.width
-// | track.height + vertical.top + vertical.bottom = dimensions.height
 var BrowserCanvas = function (x) {
     return x;
 };
-
-// | Takes a BrowserCanvas and a callback function that is called with each
-// | wheel scroll `deltaY`. Callback is provided with only the sign of `deltaY`
-// | as to be `deltaMode` agnostic.
 var wheelZoom = function (v) {
     return function (cb) {
         return $foreign.canvasWheelCBImpl(v.staticOverlay)(cb);
@@ -43882,8 +43256,6 @@ var translateBuffer = function (p) {
         };
     };
 };
-
-// | using hardcoded inner padding for now; makes it look a bit better
 var trackInnerPad = 5.0;
 var trackTotalDimensions = function (d) {
     var extra = 2.0 * trackInnerPad;
@@ -43961,15 +43333,8 @@ var newtypeBufferedCanvas = new Data_Newtype.Newtype(function (n) {
 var newtypeBrowserCanvas = new Data_Newtype.Newtype(function (n) {
     return n;
 }, BrowserCanvas);
-
-// hardcoded global label font for now
-// can't use Drawing.Font because we need raw Canvas to measure the text size,
-// but we can at least use Drawing to generate the font string
 var labelFontSize = 14;
 var labelFont = Graphics_Drawing_Font.fontString(Graphics_Drawing_Font.font(Graphics_Drawing_Font.sansSerif)(labelFontSize)(Data_Monoid.mempty(Graphics_Drawing_Font.monoidFontOptions)));
-
-// | Calculate the rectangle covered by a label when it'd be rendered
-// | to a provided canvas context
 var labelBox = function (ctx) {
     return function (v) {
         return function __do() {
@@ -43977,39 +43342,62 @@ var labelBox = function (ctx) {
                 var v1 = Graphics_Canvas.setFont(labelFont)(ctx)();
                 return Graphics_Canvas.measureText(ctx)(v.text)();
             })();
+            var pad = 14.0 + v1.width / 2.0;
+            var x = (function () {
+                if (v.gravity instanceof LCenter) {
+                    return v.point.x;
+                };
+                if (v.gravity instanceof LLeft) {
+                    return v.point.x - pad;
+                };
+                if (v.gravity instanceof LRight) {
+                    return v.point.x + pad;
+                };
+                throw new Error("Failed pattern match at Genetics.Browser.Track.UI.Canvas line 509, column 11 - line 512, column 33: " + [ v.gravity.constructor.name ]);
+            })();
             var height = Data_Int.toNumber(labelFontSize);
             return {
-                x: v.point.x,
-                y: v.point.y,
+                x: x,
+                y: v.point.y - height,
                 w: v1.width,
                 h: height
             };
         };
     };
 };
-
-// | Returns `true` if the input rectangles overlap
 var isOverlapping = function (r1) {
     return function (r2) {
         return r1.x < r2.x + r2.w && (r1.x + r1.w > r2.x && (r1.y < r2.y + r2.h && r1.h + r1.y > r2.y));
     };
 };
-
-// TODO calculate based on glyph bounding boxes
 var glyphBufferSize = {
     width: 15.0,
     height: 300.0
 };
-var getBufferedContext = Data_Functor.map(Data_Functor.functorFn)(Graphics_Canvas.getContext2D)(function ($168) {
+var getBufferedContext = Data_Functor.map(Data_Functor.functorFn)(Graphics_Canvas.getContext2D)(function ($174) {
     return (function (v) {
         return v.front;
-    })(Data_Newtype.unwrap(newtypeBufferedCanvas)($168));
+    })(Data_Newtype.unwrap(newtypeBufferedCanvas)($174));
 });
 var eqRectangle = function (v) {
     return function (r) {
         return v.x === r.x && (v.y === r.y && (v.w === r.w && v.h === r.h));
     };
 };
+var eqLabelPlace = new Data_Eq.Eq(function (x) {
+    return function (y) {
+        if (x instanceof LLeft && y instanceof LLeft) {
+            return true;
+        };
+        if (x instanceof LCenter && y instanceof LCenter) {
+            return true;
+        };
+        if (x instanceof LRight && y instanceof LRight) {
+            return true;
+        };
+        return false;
+    };
+});
 var drawToBuffer = function (v) {
     return function (f) {
         return function __do() {
@@ -44018,8 +43406,6 @@ var drawToBuffer = function (v) {
         };
     };
 };
-
-// | Helper function for erasing the contents of a canvas context given its dimensions
 var clearCanvas = function (ctx) {
     return function (v) {
         return Data_Functor["void"](Control_Monad_Eff.functorEff)(Graphics_Canvas.clearRect(ctx)({
@@ -44073,9 +43459,6 @@ var canvasDrag = function (f) {
         return $foreign.canvasDragImpl(el)(toEither(f));
     };
 };
-
-// | Takes a BrowserCanvas and a callback function that is called with the
-// | total dragged distance when a click & drag action is completed.
 var dragScroll = function (v) {
     return function (cb) {
         var f = function (v1) {
@@ -44100,10 +43483,6 @@ var dragScroll = function (v) {
     };
 };
 var canvasClick = Control_Monad_Eff_Uncurried.runEffFn2($foreign.canvasClickImpl);
-
-// | Attaches two callbacks to the BrowserCanvas click event handler,
-// | provided with the track canvas and static overlay canvas' relative
-// | coordinates of the click, respectively.
 var browserOnClick = function (v) {
     return function (v1) {
         return canvasClick(v.staticOverlay)(function (o) {
@@ -44166,14 +43545,14 @@ var setTrackCanvasSize = function (dim) {
         return function __do() {
             setBufferedCanvasSize(trackTotalDimensions(dim))(v.canvas)();
             return TrackCanvas((function () {
-                var $142 = {};
-                for (var $143 in v) {
-                    if ({}.hasOwnProperty.call(v, $143)) {
-                        $142[$143] = v[$143];
+                var $148 = {};
+                for (var $149 in v) {
+                    if ({}.hasOwnProperty.call(v, $149)) {
+                        $148[$149] = v[$149];
                     };
                 };
-                $142.dimensions = dim;
-                return $142;
+                $148.dimensions = dim;
+                return $148;
             })());
         };
     };
@@ -44187,21 +43566,19 @@ var setBrowserCanvasSize = function (dim) {
             setBufferedCanvasSize(dim)(v.trackOverlay)();
             var v2 = Graphics_Canvas.setCanvasDimensions(dim)(v.staticOverlay)();
             return BrowserCanvas((function () {
-                var $148 = {};
-                for (var $149 in v) {
-                    if ({}.hasOwnProperty.call(v, $149)) {
-                        $148[$149] = v[$149];
+                var $154 = {};
+                for (var $155 in v) {
+                    if ({}.hasOwnProperty.call(v, $155)) {
+                        $154[$155] = v[$155];
                     };
                 };
-                $148.dimensions = dim;
-                $148.track = v1;
-                return $148;
+                $154.dimensions = dim;
+                $154.track = v1;
+                return $154;
             })());
         };
     };
 };
-
-// TODO browser background color shouldn't be hardcoded
 var backgroundColor = "white";
 var appendBoxed = function (sofar) {
     return function (next) {
@@ -44242,7 +43619,7 @@ var renderBrowser = function (d) {
     return function (v) {
         return function (offset) {
             return function (ui) {
-                var labels = Data_Semigroup.append(Data_Semigroup.semigroupArray)(ui.tracks.gwas.labels)(ui.tracks.annotations.labels);
+                var labels = Data_Semigroup.append(Data_Semigroup.semigroupArray)(ui.tracks.snps.labels)(ui.tracks.annotations.labels);
                 return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
                     var v1 = Graphics_Canvas.getContext2D(v.staticOverlay)();
                     clearCanvas(v1)(v.dimensions)();
@@ -44279,7 +43656,7 @@ var renderBrowser = function (d) {
                                 x: trackInnerPad - offset,
                                 y: trackInnerPad
                             })(bfr)))(function () {
-                                return Data_Foldable.for_(Control_Monad_Aff.applicativeAff)(Data_Foldable.foldableArray)([ ui.tracks.gwas.drawings, ui.tracks.annotations.drawings ])(function (t) {
+                                return Data_Foldable.for_(Control_Monad_Aff.applicativeAff)(Data_Foldable.foldableArray)([ ui.tracks.snps.drawings, ui.tracks.annotations.drawings ])(function (t) {
                                     return Data_Foldable.for_(Control_Monad_Aff.applicativeAff)(Data_Foldable.foldableArray)(t)(function (s) {
                                         return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(renderGlyphs(v.track)(s)))(function () {
                                             return Control_Monad_Aff.delay(d);
@@ -44295,10 +43672,10 @@ var renderBrowser = function (d) {
     };
 };
 var _Track = function (dictStrong) {
-    return function ($169) {
+    return function ($175) {
         return Data_Lens_Iso_Newtype._Newtype(newtypeBrowserCanvas)(newtypeBrowserCanvas)(dictStrong.Profunctor0())(Data_Lens_Record.prop(new Data_Symbol.IsSymbol(function () {
             return "track";
-        }))()()(Data_Symbol.SProxy.value)(dictStrong)($169));
+        }))()()(Data_Symbol.SProxy.value)(dictStrong)($175));
     };
 };
 var _Element = function (dictProfunctor) {
@@ -44312,17 +43689,14 @@ var setCanvasZIndex = function (ce) {
         return setCanvasStyle(ce)("z-index")(Data_Show.show(Data_Show.showInt)(i));
     };
 };
-var setCanvasStyles = function ($170) {
-    return setElementStyles(Data_Lens_Getter.view(_Element(Data_Lens_Internal_Forget.profunctorForget))($170));
+var setCanvasStyles = function ($176) {
+    return setElementStyles(Data_Lens_Getter.view(_Element(Data_Lens_Internal_Forget.profunctorForget))($176));
 };
 var setCanvasPosition = function (v) {
     return function (ce) {
         return setCanvasStyles(ce)([ new Data_Tuple.Tuple("position", "absolute"), new Data_Tuple.Tuple("top", Data_Show.show(Data_Show.showNumber)(v.top) + "px"), new Data_Tuple.Tuple("left", Data_Show.show(Data_Show.showNumber)(v.left) + "px") ]);
     };
 };
-
-// | Creates a `BrowserCanvas` and appends it to the provided element.
-// | Resizes the container element to fit.
 var browserCanvas = function (dimensions) {
     return function (trackPadding) {
         return function (el) {
@@ -44376,10 +43750,10 @@ var browserCanvas = function (dimensions) {
 };
 var _Dimensions = function (dictNewtype) {
     return function (dictStrong) {
-        return function ($171) {
+        return function ($177) {
             return Data_Lens_Iso_Newtype._Newtype(dictNewtype)(dictNewtype)(dictStrong.Profunctor0())(Data_Lens_Record.prop(new Data_Symbol.IsSymbol(function () {
                 return "dimensions";
-            }))()()(Data_Symbol.SProxy.value)(dictStrong)($171));
+            }))()()(Data_Symbol.SProxy.value)(dictStrong)($177));
         };
     };
 };
@@ -44421,6 +43795,9 @@ module.exports = {
     setBrowserCanvasSize: setBrowserCanvasSize,
     browserCanvas: browserCanvas,
     renderGlyphs: renderGlyphs,
+    LLeft: LLeft,
+    LCenter: LCenter,
+    LRight: LRight,
     labelFontSize: labelFontSize,
     labelFont: labelFont,
     labelBox: labelBox,
@@ -44432,6 +43809,7 @@ module.exports = {
     newtypeBufferedCanvas: newtypeBufferedCanvas,
     newtypeTrackCanvas: newtypeTrackCanvas,
     newtypeBrowserCanvas: newtypeBrowserCanvas,
+    eqLabelPlace: eqLabelPlace,
     createCanvas: $foreign.createCanvas,
     setElementStyleImpl: $foreign.setElementStyleImpl,
     appendCanvasElem: $foreign.appendCanvasElem,
@@ -44579,6 +43957,7 @@ exports.setDebugDivPoint = function(p) {
 };
 
 },{}],316:[function(require,module,exports){
+// Generated by purs version 0.11.7
 "use strict";
 var $foreign = require("./foreign");
 var Color = require("../Color");
@@ -44608,9 +43987,11 @@ var DOM_Node_Types = require("../DOM.Node.Types");
 var Data_Array = require("../Data.Array");
 var Data_Bifunctor = require("../Data.Bifunctor");
 var Data_BigInt = require("../Data.BigInt");
+var Data_Boolean = require("../Data.Boolean");
 var Data_Either = require("../Data.Either");
 var Data_Eq = require("../Data.Eq");
 var Data_EuclideanRing = require("../Data.EuclideanRing");
+var Data_Filterable = require("../Data.Filterable");
 var Data_Foldable = require("../Data.Foldable");
 var Data_Foreign = require("../Data.Foreign");
 var Data_Function = require("../Data.Function");
@@ -44622,8 +44003,6 @@ var Data_Int = require("../Data.Int");
 var Data_Lens = require("../Data.Lens");
 var Data_Lens_Getter = require("../Data.Lens.Getter");
 var Data_Lens_Internal_Forget = require("../Data.Lens.Internal.Forget");
-var Data_Lens_Internal_Re = require("../Data.Lens.Internal.Re");
-var Data_Lens_Iso = require("../Data.Lens.Iso");
 var Data_List_Types = require("../Data.List.Types");
 var Data_Map = require("../Data.Map");
 var Data_Maybe = require("../Data.Maybe");
@@ -44631,7 +44010,10 @@ var Data_Monoid = require("../Data.Monoid");
 var Data_Newtype = require("../Data.Newtype");
 var Data_Ord = require("../Data.Ord");
 var Data_Pair = require("../Data.Pair");
+var Data_Record = require("../Data.Record");
+var Data_Record_Builder = require("../Data.Record.Builder");
 var Data_Record_Extra = require("../Data.Record.Extra");
+var Data_Record_Unsafe = require("../Data.Record.Unsafe");
 var Data_Ring = require("../Data.Ring");
 var Data_Semigroup = require("../Data.Semigroup");
 var Data_Semiring = require("../Data.Semiring");
@@ -44654,6 +44036,7 @@ var $$Math = require("../Math");
 var Partial_Unsafe = require("../Partial.Unsafe");
 var Prelude = require("../Prelude");
 var Simple_JSON = require("../Simple.JSON");
+var Type_Prelude = require("../Type.Prelude");
 var Type_Row = require("../Type.Row");
 var Unsafe_Coerce = require("../Unsafe.Coerce");
 var ScrollView = (function () {
@@ -44724,8 +44107,14 @@ var IBoxSetContents = (function () {
     };
     return IBoxSetContents;
 })();
-var AffCache = function (x) {
+var BCmd = function (x) {
     return x;
+};
+var InitBStateRecord = function (initBStateRecordImpl) {
+    this.initBStateRecordImpl = initBStateRecordImpl;
+};
+var ReadBStateRecord = function (readBStateRecordImpl) {
+    this.readBStateRecordImpl = readBStateRecordImpl;
 };
 var wrapWith = function (tag) {
     return function (x) {
@@ -44743,7 +44132,7 @@ var updateViewFold = function (uv) {
         if (uv instanceof ModView) {
             return Data_Newtype.over(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(Genetics_Browser_Types_Coordinates.CoordSysView)(uv.value0)(iv);
         };
-        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 102, column 24 - line 105, column 41: " + [ uv.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 109, column 24 - line 112, column 41: " + [ uv.constructor.name ]);
     };
 };
 var updateInfoBox = function (el) {
@@ -44763,11 +44152,30 @@ var updateInfoBox = function (el) {
         if (cmd instanceof IBoxSetContents) {
             return $foreign.setElementContents(el)(cmd.value0);
         };
-        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 537, column 3 - line 547, column 33: " + [ cmd.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 588, column 3 - line 598, column 33: " + [ cmd.constructor.name ]);
     };
 };
+var updateBStateField = function (dictIsSymbol) {
+    return function (dictRowCons) {
+        return function (dictRowCons1) {
+            return function (bsr) {
+                return function (k) {
+                    return function (f) {
+                        var avar = Data_Record.get(dictIsSymbol)(dictRowCons1)(k)(bsr);
+                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.takeVar(avar))(function (v) {
+                            return Control_Monad_Aff_AVar.putVar(f(v))(avar);
+                        });
+                    };
+                };
+            };
+        };
+    };
+};
+var takeBCmd = function (v) {
+    return Control_Monad_Aff_AVar.takeVar(v);
+};
 var snpHTML = function (v) {
-    var contents = Data_Foldable.foldMap(Data_Foldable.foldableArray)(Data_Monoid.monoidString)(wrapWith("p"))([ "SNP: " + v.feature.name, "Chr: " + Data_Show.show(Genetics_Browser_Types.showChrId)(v.feature.chrId), "Pos: " + Data_Show.show(Genetics_Browser_Types.showBp)(Data_Pair.fst(v.position)), "Score: " + Data_Show.show(Data_Show.showNumber)(v.feature.score), "-log10: " + Data_Show.show(Data_Show.showNumber)(Genetics_Browser_Track_Backend.negLog10(v.feature.score)) ]);
+    var contents = Data_Foldable.foldMap(Data_Foldable.foldableArray)(Data_Monoid.monoidString)(wrapWith("p"))([ "SNP: " + v.feature.name, "Chr: " + Data_Show.show(Genetics_Browser_Types.showChrId)(v.feature.chrId), "Pos: " + Data_Show.show(Genetics_Browser_Types.showBp)(Data_Pair.fst(v.position)), "Score: " + Data_Show.show(Data_Show.showNumber)(v.feature.score), "-log10: " + Data_Show.show(Data_Show.showNumber)(Data_Newtype.unwrap(Genetics_Browser_Types.newtypeNegLog10)(Data_Lens_Getter.viewOn(v.feature.score)(Genetics_Browser_Types._NegLog10(Data_Lens_Internal_Forget.profunctorForget)))) ]);
     return wrapWith("div")(contents);
 };
 var showUpdateView = new Data_Show.Show(function (v) {
@@ -44779,8 +44187,6 @@ var showUpdateView = new Data_Show.Show(function (v) {
     };
     return "(ModView)";
 });
-
-// TODO idk if this instance makes sense??? whatevs
 var semigroupUpdateView = new Data_Semigroup.Semigroup(function (v) {
     return function (v1) {
         if (v instanceof ScrollView && v1 instanceof ScrollView) {
@@ -44792,30 +44198,146 @@ var semigroupUpdateView = new Data_Semigroup.Semigroup(function (v) {
         return v1;
     };
 });
+var readBStateRecordNil = new ReadBStateRecord(function (v) {
+    return function (v1) {
+        return function (v2) {
+            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)({});
+        };
+    };
+});
+var readBStateRecordImpl = function (dict) {
+    return dict.readBStateRecordImpl;
+};
+var readBStateRecordCons = function (dictIsSymbol) {
+    return function (dictReadBStateRecord) {
+        return function (dictRowLacks) {
+            return function (dictRowLacks1) {
+                return function (dictRowCons) {
+                    return function (dictRowCons1) {
+                        return new ReadBStateRecord(function (v) {
+                            return function (v1) {
+                                return function (record) {
+                                    var avar = Data_Record.get(dictIsSymbol)(dictRowCons)(Data_Symbol.SProxy.value)(record);
+                                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.readVar(avar))(function (v2) {
+                                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(readBStateRecordImpl(dictReadBStateRecord)(Type_Row.RLProxy.value)(Type_Row.RLProxy.value)(Data_Record["delete"](dictIsSymbol)(dictRowLacks1)(dictRowCons)(Data_Symbol.SProxy.value)(record)))(function (v3) {
+                                            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Data_Record.insert(dictIsSymbol)(dictRowLacks)(dictRowCons1)(Data_Symbol.SProxy.value)(v2)(v3));
+                                        });
+                                    });
+                                };
+                            };
+                        });
+                    };
+                };
+            };
+        };
+    };
+};
+var readBStateRecord = function (dictRowToList) {
+    return function (dictRowToList1) {
+        return function (dictReadBStateRecord) {
+            return function (bsr) {
+                return readBStateRecordImpl(dictReadBStateRecord)(Type_Row.RLProxy.value)(Type_Row.RLProxy.value)(bsr);
+            };
+        };
+    };
+};
+var readBStateField$prime = function (dictIsSymbol) {
+    return function (dictRowCons) {
+        return function (bsr) {
+            return function (k) {
+                var avar = Data_Record_Unsafe.unsafeGet(Data_Symbol.reflectSymbol(dictIsSymbol)(k))(bsr);
+                return Control_Monad_Aff_AVar.readVar(avar);
+            };
+        };
+    };
+};
+var readBStateField = function (dictIsSymbol) {
+    return function (dictRowCons) {
+        return function (dictRowCons1) {
+            return function (bsr) {
+                return function (k) {
+                    var avar = Data_Record.get(dictIsSymbol)(dictRowCons1)(k)(bsr);
+                    return Control_Monad_Aff_AVar.readVar(avar);
+                };
+            };
+        };
+    };
+};
 var queueCmd = function (av) {
     return function (cmd) {
         return Control_Monad_Aff.launchAff_(Control_Monad_Aff_AVar.putVar(cmd)(av));
     };
 };
-var printSNPInfo = function (fs) {
-    var showSnp = function (f) {
-        return Control_Monad_Eff_Console.log(f.feature.name + (" - " + (Data_Newtype.unwrap(Genetics_Browser_Types.newtypeChrId)(f.feature.chrId) + (" @ " + Data_Show.show(Data_Pair.showPair(Data_Show.showString))(Data_Functor.map(Data_Pair.functorPair)(Data_Show.show(Genetics_Browser_Types.showBp))(f.position))))));
+var queueBCmd = function (v) {
+    return function (a) {
+        return Control_Monad_Aff_AVar.putVar(a)(v);
     };
+};
+var queueBCmd$prime = function (av) {
+    return function (a) {
+        return Control_Monad_Aff.launchAff_(queueBCmd(av)(a));
+    };
+};
+var printSNPInfo = function (fs) {
     var n = Data_Foldable.length(Data_Foldable.foldableArray)(Data_Semiring.semiringInt)(fs);
     return function __do() {
         Control_Monad_Eff_Console.log("showing " + (Data_Show.show(Data_Show.showInt)(5) + (" out of " + (Data_Show.show(Data_Show.showInt)(n) + " clicked glyphs"))))();
-        return Data_Foldable.for_(Control_Monad_Eff.applicativeEff)(Data_Foldable.foldableArray)(Data_Array.take(5)(fs))(showSnp)();
+        return Data_Foldable.for_(Control_Monad_Eff.applicativeEff)(Data_Foldable.foldableArray)(Data_Array.take(5)(fs))(function ($261) {
+            return Control_Monad_Eff_Console.log($261);
+        })();
     };
 };
-var newtypeAffCache = new Data_Newtype.Newtype(function (n) {
-    return n;
-}, AffCache);
-var mouseChrSizes = Data_Functor.map(Data_Functor.functorArray)(Data_Bifunctor.bimap(Data_Tuple.bifunctorTuple)(Genetics_Browser_Types.ChrId)(function ($272) {
-    return Data_Maybe.fromJust()(Data_BigInt.fromString($272));
+var mouseChrSizes = Data_Functor.map(Data_Functor.functorArray)(Data_Bifunctor.bimap(Data_Tuple.bifunctorTuple)(Genetics_Browser_Types.ChrId)(function ($262) {
+    return Data_Maybe.fromJust()(Data_BigInt.fromString($262));
 }))([ new Data_Tuple.Tuple("1", "195471971"), new Data_Tuple.Tuple("2", "182113224"), new Data_Tuple.Tuple("3", "160039680"), new Data_Tuple.Tuple("4", "156508116"), new Data_Tuple.Tuple("5", "151834684"), new Data_Tuple.Tuple("6", "149736546"), new Data_Tuple.Tuple("7", "145441459"), new Data_Tuple.Tuple("8", "129401213"), new Data_Tuple.Tuple("9", "124595110"), new Data_Tuple.Tuple("10", "130694993"), new Data_Tuple.Tuple("11", "122082543"), new Data_Tuple.Tuple("12", "120129022"), new Data_Tuple.Tuple("13", "120421639"), new Data_Tuple.Tuple("14", "124902244"), new Data_Tuple.Tuple("15", "104043685"), new Data_Tuple.Tuple("16", "98207768"), new Data_Tuple.Tuple("17", "94987271"), new Data_Tuple.Tuple("18", "90702639"), new Data_Tuple.Tuple("19", "61431566"), new Data_Tuple.Tuple("X", "171031299"), new Data_Tuple.Tuple("Y", "91744698") ]);
 var monoidUpdateView = new Data_Monoid.Monoid(function () {
     return semigroupUpdateView;
 }, new ModView(Control_Category.id(Control_Category.categoryFn)));
+var initBStateRecordNil = new InitBStateRecord(function (v) {
+    return function (v1) {
+        return function (v2) {
+            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)({});
+        };
+    };
+});
+var initBStateRecordImpl = function (dict) {
+    return dict.initBStateRecordImpl;
+};
+var initBStateRecordCons = function (dictIsSymbol) {
+    return function (dictInitBStateRecord) {
+        return function (dictRowLacks) {
+            return function (dictRowLacks1) {
+                return function (dictRowCons) {
+                    return function (dictRowCons1) {
+                        return new InitBStateRecord(function (v) {
+                            return function (v1) {
+                                return function (record) {
+                                    var a = Data_Record.get(dictIsSymbol)(dictRowCons)(Data_Symbol.SProxy.value)(record);
+                                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeVar(a))(function (v2) {
+                                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(initBStateRecordImpl(dictInitBStateRecord)(Type_Row.RLProxy.value)(Type_Row.RLProxy.value)(Data_Record["delete"](dictIsSymbol)(dictRowLacks1)(dictRowCons)(Data_Symbol.SProxy.value)(record)))(function (v3) {
+                                            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Data_Record.insert(dictIsSymbol)(dictRowLacks)(dictRowCons1)(Data_Symbol.SProxy.value)(v2)(v3));
+                                        });
+                                    });
+                                };
+                            };
+                        });
+                    };
+                };
+            };
+        };
+    };
+};
+var initBStateRecord = function (dictRowToList) {
+    return function (dictRowToList1) {
+        return function (dictInitBStateRecord) {
+            return function (rIn) {
+                return Control_Bind.bind(Control_Monad_Aff.bindAff)(initBStateRecordImpl(dictInitBStateRecord)(Type_Row.RLProxy.value)(Type_Row.RLProxy.value)(rIn))(function (v) {
+                    return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(v);
+                });
+            };
+        };
+    };
+};
 var infoBoxId = Data_Newtype.wrap(DOM_Node_Types.newtypeElementId)("infoBox");
 var initInfoBox = function __do() {
     var v = Data_Functor.map(Control_Monad_Eff.functorEff)(DOM_HTML_Types.htmlDocumentToDocument)(Control_Bind.bindFlipped(Control_Monad_Eff.bindEff)(DOM_HTML_Window.document)(DOM_HTML.window))();
@@ -44829,7 +44351,7 @@ var initInfoBox = function __do() {
         if (v2 instanceof Data_Maybe.Just) {
             return Data_Functor["void"](Control_Monad_Eff.functorEff)(DOM_Classy_Node.appendChild(DOM_Classy_Node.isNodeElement)(DOM_Classy_Node.isNodeElement)(v1)(v2.value0))();
         };
-        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 560, column 31 - line 562, column 54: " + [ v2.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 611, column 31 - line 613, column 54: " + [ v2.constructor.name ]);
     })();
     return updateInfoBox(v1);
 };
@@ -44849,7 +44371,7 @@ var genericInfoBoxF = new Data_Generic_Rep.Generic(function (x) {
     if (x instanceof IBoxSetContents) {
         return new Data_Generic_Rep.Inr(new Data_Generic_Rep.Inr(new Data_Generic_Rep.Inr(new Data_Generic_Rep.Inr(x.value0))));
     };
-    throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 530, column 8 - line 530, column 54: " + [ x.constructor.name ]);
+    throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 581, column 8 - line 581, column 54: " + [ x.constructor.name ]);
 }, function (x) {
     if (x instanceof Data_Generic_Rep.Inl) {
         return IBoxShow.value;
@@ -44866,7 +44388,7 @@ var genericInfoBoxF = new Data_Generic_Rep.Generic(function (x) {
     if (x instanceof Data_Generic_Rep.Inr && (x.value0 instanceof Data_Generic_Rep.Inr && (x.value0.value0 instanceof Data_Generic_Rep.Inr && x.value0.value0.value0 instanceof Data_Generic_Rep.Inr))) {
         return new IBoxSetContents(x.value0.value0.value0.value0);
     };
-    throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 530, column 8 - line 530, column 54: " + [ x.constructor.name ]);
+    throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 581, column 8 - line 581, column 54: " + [ x.constructor.name ]);
 });
 var showInfoBoxF = new Data_Show.Show(Data_Generic_Rep_Show.genericShow(genericInfoBoxF)(Data_Generic_Rep_Show.genericShowSum(Data_Generic_Rep_Show.genericShowConstructor(Data_Generic_Rep_Show.genericShowArgsNoArguments)(new Data_Symbol.IsSymbol(function () {
     return "IBoxShow";
@@ -44879,34 +44401,12 @@ var showInfoBoxF = new Data_Show.Show(Data_Generic_Rep_Show.genericShow(genericI
 })))(Data_Generic_Rep_Show.genericShowConstructor(Data_Generic_Rep_Show.genericShowArgsArgument(Data_Show.showString))(new Data_Symbol.IsSymbol(function () {
     return "IBoxSetContents";
 }))))))));
-var genericAffCache = new Data_Generic_Rep.Generic(function (x) {
-    return new Data_Generic_Rep.Product(x.cache, x.diff);
-}, function (x) {
-    return {
-        cache: x.value0,
-        diff: x.value1
-    };
-});
-var functorAffCache = new Data_Functor.Functor(function (f) {
-    return function (m) {
-        var $155 = {};
-        for (var $156 in m) {
-            if ({}.hasOwnProperty.call(m, $156)) {
-                $155[$156] = m[$156];
-            };
-        };
-        $155.cache = Data_Functor.map(Data_Functor.functorFn)(Data_Functor.map(Control_Monad_Aff.functorAff)(f))(m.cache);
-        return $155;
-    };
-});
-
-// TODO this could almost certainly be done better
 var chunkConsumer = function (dictFoldable) {
     return function (dictMonoid) {
         return function (av) {
             return Control_Coroutine.consumer(Control_Monad_Aff.monadAff)(function (m) {
-                var $158 = Data_Foldable["null"](dictFoldable)(m);
-                if ($158) {
+                var $171 = Data_Foldable["null"](dictFoldable)(m);
+                if ($171) {
                     return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(new Data_Maybe.Just(Data_Unit.unit));
                 };
                 return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.takeVar(av))(function (v) {
@@ -44920,8 +44420,6 @@ var chunkConsumer = function (dictFoldable) {
         };
     };
 };
-
-// Feels like this one takes care of a bit too much...
 var fetchLoop1 = function (v) {
     if (v instanceof Data_Maybe.Nothing) {
         return Control_Monad_Aff_AVar.makeEmptyVar;
@@ -44935,183 +44433,18 @@ var fetchLoop1 = function (v) {
             });
         });
     };
-    throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 788, column 1 - line 790, column 33: " + [ v.constructor.name ]);
+    throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 812, column 1 - line 814, column 33: " + [ v.constructor.name ]);
 };
-
-// | Starts threads that fetch & parse each of the provided tracks,
-// | filling an AVar over time per track, which can be used by other parts of the application
-// | (read only, should be a newtype)
-var fetchLoop = function (cs) {
-    return function (urls) {
-        return Control_Bind.bind(Control_Monad_Aff.bindAff)(fetchLoop1(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Track_Demo.produceGWAS(cs))(urls.gwas)))(function (v) {
-            return Control_Bind.bind(Control_Monad_Aff.bindAff)(fetchLoop1(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Track_Demo.produceAnnots(cs))(urls.annotations)))(function (v1) {
-                return Control_Bind.bind(Control_Monad_Aff.bindAff)(fetchLoop1(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Track_Demo.produceGenes(cs))(urls.genes)))(function (v2) {
-                    return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)({
-                        gwas: v,
-                        genes: v2,
-                        annotations: v1
-                    });
-                });
-            });
-        });
-    };
-};
-
-/**
- * 
- * -- this type/formulation isn't *quite* right, yet
- * cacheCompose' :: ∀ a b c.
- *              (b -> b -> Boolean)
- *           -> (b -> c)
- *           -> AffCache _ a b
- *           -> AVar c
- *           -> AffCache _ b c
- * cacheCompose' diff f prev outVar =
- *   let cache = \a -> do
- *         lastIn  <- AVar.tryTakeVar inVar
- *         lastOut <- AVar.tryTakeVar outVar
- *         let o = case lastIn, lastOut of
- *                   Just i, Just o -> if diff a i then f a else o
- *                   _, _ -> f a
- * 
- *         AVar.putVar a inVar
- *         AVar.putVar o outVar
- *         pure o
- * 
- *   in AffCache { diff, cache }
- */
-var cached = function ($273) {
-    return (function (v) {
-        return v.cache;
-    })(Data_Newtype.unwrap(newtypeAffCache)($273));
-};
-var cacheFun$prime = function (diff) {
-    return function (f) {
-        return function (inVar) {
-            return function (outVar) {
-                var cache = function (a) {
-                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryTakeVar(inVar))(function (v) {
-                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryTakeVar(outVar))(function (v1) {
-                            var o = (function () {
-                                if (v instanceof Data_Maybe.Just && v1 instanceof Data_Maybe.Just) {
-                                    var $171 = diff(a)(v.value0);
-                                    if ($171) {
-                                        return f(a);
-                                    };
-                                    return v1.value0;
-                                };
-                                return f(a);
-                            })();
-                            return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.putVar(a)(inVar))(function () {
-                                return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.putVar(o)(outVar))(function () {
-                                    return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(o);
-                                });
-                            });
-                        });
-                    });
-                };
-                return {
-                    diff: diff,
-                    cache: cache
-                };
-            };
-        };
-    };
-};
-var cacheFun = function (diff) {
-    return function (f) {
-        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v) {
-            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v1) {
-                var cache = function (a) {
-                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryTakeVar(v))(function (v2) {
-                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryTakeVar(v1))(function (v3) {
-                            var o = (function () {
-                                if (v2 instanceof Data_Maybe.Just && v3 instanceof Data_Maybe.Just) {
-                                    var $180 = diff(a)(v2.value0);
-                                    if ($180) {
-                                        return f(a);
-                                    };
-                                    return v3.value0;
-                                };
-                                return f(a);
-                            })();
-                            return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.putVar(a)(v))(function () {
-                                return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.putVar(o)(v1))(function () {
-                                    return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(o);
-                                });
-                            });
-                        });
-                    });
-                };
-                return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)({
-                    diff: diff,
-                    cache: cache
-                });
-            });
-        });
-    };
-};
-var btnZoom = function (x) {
-    return function (av) {
+var btnUI = function (mods) {
+    return function (cb) {
         return function __do() {
-            $foreign.buttonEvent("zoomOut")(queueCmd(av)(ZoomView.create(1.0 + x)))();
-            return $foreign.buttonEvent("zoomIn")(queueCmd(av)(ZoomView.create(1.0 - x)))();
+            $foreign.buttonEvent("scrollLeft")(cb(new ScrollView(-mods.scrollMod)))();
+            $foreign.buttonEvent("scrollRight")(cb(new ScrollView(mods.scrollMod)))();
+            $foreign.buttonEvent("zoomOut")(cb(ZoomView.create(1.0 + mods.zoomMod)))();
+            return $foreign.buttonEvent("zoomIn")(cb(ZoomView.create(1.0 - mods.zoomMod)))();
         };
     };
 };
-var btnScroll = function (x) {
-    return function (av) {
-        return function __do() {
-            $foreign.buttonEvent("scrollLeft")(queueCmd(av)(new ScrollView(-x)))();
-            return $foreign.buttonEvent("scrollRight")(queueCmd(av)(new ScrollView(x)))();
-        };
-    };
-};
-var browserCache$prime = function (f) {
-    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Apply.apply(Control_Monad_Aff.applyAff)(Data_Functor.map(Control_Monad_Aff.functorAff)(function (v) {
-        return function (v1) {
-            return {
-                bcDim: v,
-                viewSize: v1
-            };
-        };
-    })(Control_Monad_Aff_AVar.makeEmptyVar))(Control_Monad_Aff_AVar.makeEmptyVar))(function (v) {
-        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Apply.apply(Control_Monad_Aff.applyAff)(Data_Functor.map(Control_Monad_Aff.functorAff)(function (v1) {
-            return function (v2) {
-                return {
-                    appliedBC: v1,
-                    appliedVS: v2
-                };
-            };
-        })(Control_Monad_Aff_AVar.makeEmptyVar))(Control_Monad_Aff_AVar.makeEmptyVar))(function (v1) {
-            var csvCacheVal = function ($274) {
-                return Genetics_Browser_Types_Coordinates.pairSize(Data_BigInt.ringBigInt)(Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)($274));
-            };
-            var diffCSView = Data_Function.on(Data_Eq.eq(Data_BigInt.eqBigInt))(csvCacheVal);
-            var bcCacheVal = function (bc) {
-                var d = Data_Lens_Getter.viewOn(bc)(Genetics_Browser_Track_UI_Canvas._Dimensions(Genetics_Browser_Track_UI_Canvas.newtypeBrowserCanvas)(Data_Lens_Internal_Forget.strongForget));
-                return new Data_Tuple.Tuple(d.width, d.height);
-            };
-            var diffBC = Data_Function.on(Data_Eq.eq(Data_Tuple.eqTuple(Data_Eq.eqNumber)(Data_Eq.eqNumber)))(bcCacheVal);
-            
-            // diffBCDim d1 d2 = d1 `eqRecord` d2
-            // diffCSVSize s1 s2 =
-            // aaa :: _
-            // aaa = cacheFun' diffBC f cachedInputs.bcDim cachedOutputs.appliedBC
-var p1 = cacheFun$prime(diffBC)(f)(v.bcDim)(v1.appliedBC);
-            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(function (bc) {
-                return function (csv) {
-                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(cached(p1)(bc))(function (v2) {
-                        var p2 = cacheFun$prime(diffCSView)(v2)(v.viewSize)(v1.appliedVS);
-                        return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Data_Unit.unit);
-                    });
-                };
-            });
-        });
-    });
-};
-
-// aVS
 var browserCache = function (f) {
     return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v) {
         return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v1) {
@@ -45133,12 +44466,12 @@ var browserCache = function (f) {
                                                 return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(Control_Monad_Eff_Console.log("BrowserCanvas changed? " + Data_Show.show(Data_Show.showBoolean)(changed))))(function () {
                                                     return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Applicative.when(Control_Monad_Aff.applicativeAff)(changed)(Data_Functor["void"](Control_Monad_Aff.functorAff)(Control_Monad_Aff_AVar.tryTakeVar(v3))))(function () {
                                                         return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)((function () {
-                                                            var $194 = Data_Record_Extra.eqRecord()(Data_Record_Extra.eqRecordCons(new Data_Symbol.IsSymbol(function () {
+                                                            var $185 = Data_Record_Extra.eqRecord()(Data_Record_Extra.eqRecordCons(new Data_Symbol.IsSymbol(function () {
                                                                 return "height";
                                                             }))(Data_Eq.eqNumber)()(Data_Record_Extra.eqRecordCons(new Data_Symbol.IsSymbol(function () {
                                                                 return "width";
                                                             }))(Data_Eq.eqNumber)()(Data_Record_Extra.eqRecordNil)))(v4.value0)(newBCDim);
-                                                            if ($194) {
+                                                            if ($185) {
                                                                 return v5.value0;
                                                             };
                                                             return f(bc);
@@ -45159,8 +44492,8 @@ var browserCache = function (f) {
                                                         return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryTakeVar(v3))(function (v8) {
                                                             var output = (function () {
                                                                 if (v7 instanceof Data_Maybe.Just && v8 instanceof Data_Maybe.Just) {
-                                                                    var $202 = Data_Eq.eq(Data_BigInt.eqBigInt)(newViewSize)(v7.value0);
-                                                                    if ($202) {
+                                                                    var $193 = Data_Eq.eq(Data_BigInt.eqBigInt)(newViewSize)(v7.value0);
+                                                                    if ($193) {
                                                                         return v8.value0;
                                                                     };
                                                                     return v6(csv);
@@ -45185,55 +44518,123 @@ var browserCache = function (f) {
         });
     });
 };
-var annotationHTML = function (v) {
-    var url = Data_Maybe.fromMaybe("No URL")(Data_Functor.map(Data_Maybe.functorMaybe)(function (a) {
-        return "URL: <a target='_blank' href='" + (a + ("'>" + (a + "</a>")));
-    })(v.feature.url));
-    var showOther = function (fv) {
-        return fv.field + (": " + fv.value);
+var bCmd = Data_Functor.map(Control_Monad_Aff.functorAff)(BCmd)(Control_Monad_Aff_AVar.makeEmptyVar);
+var annotationHTML = function (disp) {
+    return function (v) {
+        var url = Data_Maybe.fromMaybe("No URL")(Data_Functor.map(Data_Maybe.functorMaybe)(function (a) {
+            return "URL: <a target='_blank' href='" + (a + ("'>" + (a + "</a>")));
+        })(v.feature.url));
+        var showOther = function (fv) {
+            return fv.field + (": " + fv.value);
+        };
+        var name = Data_Maybe.fromMaybe("Annotated SNP: " + v.feature.name)(Data_Functor.map(Data_Maybe.functorMaybe)(function (v1) {
+            return "Gene: " + v1;
+        })(v.feature.gene));
+        var contents = Data_Foldable.foldMap(Data_Foldable.foldableArray)(Data_Monoid.monoidString)(wrapWith("p"))(Data_Semigroup.append(Data_Semigroup.semigroupArray)([ name, "Pos: " + Data_Show.show(Genetics_Browser_Types.showBp)(v.feature.pos), url, "Other data: " ])(Data_Filterable.filterMap(Data_Filterable.filterableArray)(disp)(Data_Array.fromFoldable(Data_List_Types.foldableList)(v.feature.rest))));
+        return wrapWith("div")(contents);
     };
-    var name = Data_Maybe.fromMaybe("Annotated SNP: " + v.feature.name)(Data_Functor.map(Data_Maybe.functorMaybe)(function (v1) {
-        return "Gene: " + v1;
-    })(v.feature.gene));
-    var contents = Data_Foldable.foldMap(Data_Foldable.foldableArray)(Data_Monoid.monoidString)(wrapWith("p"))(Data_Semigroup.append(Data_Semigroup.semigroupArray)([ name, "Pos: " + Data_Show.show(Genetics_Browser_Types.showBp)(v.feature.pos), url, "Other data: " ])(Data_Functor.map(Data_Functor.functorArray)(showOther)(Data_Array.fromFoldable(Data_List_Types.foldableList)(v.feature.rest))));
-    return wrapWith("div")(contents);
 };
+var annotationHTMLAll = annotationHTML(function ($263) {
+    return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(Genetics_Browser_Track_Demo.showAnnotationField($263));
+});
+var annotationHTMLAnnoOnly = (function () {
+    var disp = function (fv) {
+        if (fv.field === "anno") {
+            return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(Genetics_Browser_Track_Demo.showAnnotationField(fv));
+        };
+        if (Data_Boolean.otherwise) {
+            return Data_Maybe.Nothing.value;
+        };
+        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 561, column 9 - line 563, column 41: " + [ fv.constructor.name ]);
+    };
+    return annotationHTML(disp);
+})();
 var _render = Data_Symbol.SProxy.value;
+var debugView = function (s) {
+    var get = function (name) {
+        return Control_Monad_Aff.launchAff_(Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryReadVar(s.view))(function (v) {
+            return Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)((function () {
+                if (v instanceof Data_Maybe.Nothing) {
+                    return function __do() {
+                        Control_Monad_Eff_Console.log("CoordSysView state empty")();
+                        return $foreign.setWindow(name)(Data_Unit.unit)();
+                    };
+                };
+                if (v instanceof Data_Maybe.Just) {
+                    return function __do() {
+                        Control_Monad_Eff_Console.log("CoordSysView: " + Data_Show.show(Data_Pair.showPair(Data_Show.showString))(Data_Functor.map(Data_Pair.functorPair)(Data_BigInt.toString)(Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(v.value0))))();
+                        return $foreign.setWindow(name)((function (v2) {
+                            return {
+                                l: v2.value0,
+                                r: v2.value1
+                            };
+                        })(Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(v.value0)))();
+                    };
+                };
+                throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 378, column 18 - line 384, column 64: " + [ v.constructor.name ]);
+            })());
+        }));
+    };
+    var set = function (lr) {
+        return Control_Monad_Aff.launchAff_(Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryTakeVar(s.view))(function (v) {
+            if (v instanceof Data_Maybe.Nothing) {
+                return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Data_Unit.unit);
+            };
+            if (v instanceof Data_Maybe.Just) {
+                var v$prime = Data_Newtype.wrap(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(new Data_Pair.Pair(lr.l, lr.r));
+                return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryPutVar(Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
+                    return "render";
+                }))(_render)(Data_Unit.unit))(s.uiCmd))(function (v1) {
+                    return Control_Monad_Aff_AVar.putVar(v$prime)(s.view);
+                });
+            };
+            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 388, column 10 - line 393, column 35: " + [ v.constructor.name ]);
+        }));
+    };
+    return Control_Applicative.pure(Control_Monad_Eff.applicativeEff)({
+        get: get,
+        set: set
+    });
+};
 var uiViewUpdate = function (cs) {
     return function (timeout) {
         return function (v) {
-            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeVar(new ModView(Control_Category.id(Control_Category.categoryFn))))(function (v1) {
-                var normView = Genetics_Browser_Types_Coordinates.normalizeView(cs)(Data_BigInt.fromInt(200000));
-                var loop$prime = function (updater) {
-                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.takeVar(v.viewCmd))(function (v2) {
-                        return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff.killFiber(Control_Monad_Eff_Exception.error("Resetting view update"))(updater))(function () {
-                            return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(Control_Monad_Eff_Console.log("forking view update")))(function () {
-                                return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.takeVar(v1))(function (v3) {
-                                    var cmd$prime = Data_Semigroup.append(semigroupUpdateView)(v3)(v2);
-                                    return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.putVar(cmd$prime)(v1))(function () {
-                                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff.delay(timeout))(function () {
-                                            return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(Control_Monad_Eff_Console.log("Running view update")))(function () {
-                                                return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.takeVar(v.view))(function (v4) {
-                                                    var vr$prime = normView(updateViewFold(cmd$prime)(v4));
-                                                    return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.putVar(vr$prime)(v.view))(function () {
-                                                        return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.putVar(Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
-                                                            return "render";
-                                                        }))(_render)(Data_Unit.unit))(v.uiCmd))(function () {
-                                                            return Control_Apply.applySecond(Control_Monad_Aff.applyAff)(Control_Monad_Aff_AVar.takeVar(v1))(Control_Monad_Aff_AVar.putVar(Data_Monoid.mempty(monoidUpdateView))(v1));
+            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v1) {
+                return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeVar(new ModView(Control_Category.id(Control_Category.categoryFn))))(function (v2) {
+                    var normView = Genetics_Browser_Types_Coordinates.normalizeView(cs)(Data_BigInt.fromInt(200000));
+                    var loop$prime = function (updater) {
+                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.takeVar(v1))(function (v3) {
+                            return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff.killFiber(Control_Monad_Eff_Exception.error("Resetting view update"))(updater))(function () {
+                                return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(Control_Monad_Eff_Console.log("forking view update")))(function () {
+                                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.takeVar(v2))(function (v4) {
+                                        var cmd$prime = Data_Semigroup.append(semigroupUpdateView)(v4)(v3);
+                                        return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.putVar(cmd$prime)(v2))(function () {
+                                            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff.delay(timeout))(function () {
+                                                return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(Control_Monad_Eff_Console.log("Running view update")))(function () {
+                                                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.takeVar(v.view))(function (v5) {
+                                                        var vr$prime = normView(updateViewFold(cmd$prime)(v5));
+                                                        return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.putVar(vr$prime)(v.view))(function () {
+                                                            return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.putVar(Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
+                                                                return "render";
+                                                            }))(_render)(Data_Unit.unit))(v.uiCmd))(function () {
+                                                                return Control_Apply.applySecond(Control_Monad_Aff.applyAff)(Control_Monad_Aff_AVar.takeVar(v2))(Control_Monad_Aff_AVar.putVar(Data_Monoid.mempty(monoidUpdateView))(v2));
+                                                            });
                                                         });
                                                     });
                                                 });
+                                            })))(function (v5) {
+                                                return loop$prime(v5);
                                             });
-                                        })))(function (v4) {
-                                            return loop$prime(v4);
                                         });
                                     });
                                 });
                             });
                         });
+                    };
+                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(loop$prime(Control_Applicative.pure(Control_Monad_Aff.applicativeFiber)(Data_Unit.unit))))(function (v3) {
+                        return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(queueCmd(v1));
                     });
-                };
-                return loop$prime(Control_Applicative.pure(Control_Monad_Aff.applicativeFiber)(Data_Unit.unit));
+                });
             });
         };
     };
@@ -45266,8 +44667,8 @@ var renderLoop = function (cSys) {
                         return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Bind.bindFlipped(Control_Monad_Aff.bindAff)(Data_Foldable.traverse_(Control_Monad_Aff.applicativeAff)(Data_Foldable.foldableMaybe)(Control_Monad_Aff.killFiber(Control_Monad_Eff_Exception.error("Resetting renderer"))))(Control_Monad_Aff_AVar.tryTakeVar(state.renderFiber)))(function () {
                             return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.readVar(state.view))(function (v1) {
                                 return Control_Bind.bind(Control_Monad_Aff.bindAff)(drawCachedBrowser(canvas)(v1))(function (v2) {
-                                    var currentScale = Genetics_Browser_Types_Coordinates.viewScale(Data_Lens_Getter.viewOn(canvas)(function ($275) {
-                                        return Genetics_Browser_Track_UI_Canvas._Track(Data_Lens_Internal_Forget.strongForget)(Genetics_Browser_Track_UI_Canvas._Dimensions(Genetics_Browser_Track_UI_Canvas.newtypeTrackCanvas)(Data_Lens_Internal_Forget.strongForget)($275));
+                                    var currentScale = Genetics_Browser_Types_Coordinates.viewScale(Data_Lens_Getter.viewOn(canvas)(function ($264) {
+                                        return Genetics_Browser_Track_UI_Canvas._Track(Data_Lens_Internal_Forget.strongForget)(Genetics_Browser_Track_UI_Canvas._Dimensions(Genetics_Browser_Track_UI_Canvas.newtypeTrackCanvas)(Data_Lens_Internal_Forget.strongForget)($264));
                                     }))(v1);
                                     var v3 = Genetics_Browser_Types_Coordinates.pixelsView(currentScale)(v1);
                                     return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryTakeVar(state.lastOverlaps))(function (v4) {
@@ -45278,7 +44679,7 @@ var renderLoop = function (cSys) {
                                                     y: r.y
                                                 };
                                                 return {
-                                                    gwas: v2.tracks.gwas.overlaps(n)(r$prime)
+                                                    snps: v2.tracks.snps.overlaps(n)(r$prime)
                                                 };
                                             };
                                         })(state.lastOverlaps))(function () {
@@ -45296,87 +44697,80 @@ var renderLoop = function (cSys) {
         };
     };
 };
-
-// liveRender :: ∀ c a.
-//               (c -> RenderedTrack a)
-//            -> c
-// TODO configure UI widths
 var runBrowser = function (config) {
     return function (bc) {
         return Control_Monad_Aff.launchAff(Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)($foreign.initDebugDiv(1.0)))(function () {
             return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(initInfoBox))(function (v) {
                 var cSys = Genetics_Browser_Types_Coordinates.coordSys(Genetics_Browser_Types.ordChrId)(Data_BigInt.semiringBigInt)(mouseChrSizes);
                 return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Bind.bind(Control_Monad_Aff.bindAff)(Data_Traversable.traverse(Data_Traversable.traversableMaybe)(Control_Monad_Aff.applicativeAff)(Genetics_Browser_Track_Demo.getGenes(cSys))(config.urls.genes))(function (v1) {
-                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Data_Traversable.traverse(Data_Traversable.traversableMaybe)(Control_Monad_Aff.applicativeAff)(Genetics_Browser_Track_Demo.getGWAS(cSys))(config.urls.gwas))(function (v2) {
-                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Data_Traversable.traverse(Data_Traversable.traversableMaybe)(Control_Monad_Aff.applicativeAff)(Genetics_Browser_Track_Demo.getAnnotationsNew(cSys))(config.urls.annotations))(function (v3) {
+                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Data_Traversable.traverse(Data_Traversable.traversableMaybe)(Control_Monad_Aff.applicativeAff)(Genetics_Browser_Track_Demo.getSNPs(cSys))(config.urls.snps))(function (v2) {
+                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Data_Traversable.traverse(Data_Traversable.traversableMaybe)(Control_Monad_Aff.applicativeAff)(Genetics_Browser_Track_Demo.getAnnotations(cSys))(config.urls.annotations))(function (v3) {
                             return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(Control_Monad_Eff_Console.log(v3)))(function () {
                                 return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)({
                                     genes: v1,
-                                    gwas: v2,
+                                    snps: v2,
                                     annotations: v3
                                 });
                             });
                         });
                     });
                 }))(function (v1) {
-                    var trackDims = Data_Lens_Getter.viewOn(bc)(function ($276) {
-                        return Genetics_Browser_Track_UI_Canvas._Track(Data_Lens_Internal_Forget.strongForget)(Genetics_Browser_Track_UI_Canvas._Dimensions(Genetics_Browser_Track_UI_Canvas.newtypeTrackCanvas)(Data_Lens_Internal_Forget.strongForget)($276));
+                    var trackDims = Data_Lens_Getter.viewOn(bc)(function ($265) {
+                        return Genetics_Browser_Track_UI_Canvas._Track(Data_Lens_Internal_Forget.strongForget)(Genetics_Browser_Track_UI_Canvas._Dimensions(Genetics_Browser_Track_UI_Canvas.newtypeTrackCanvas)(Data_Lens_Internal_Forget.strongForget)($265));
                     });
-                    var peaks$prime = function (vs) {
-                        return Genetics_Browser_Track_Demo.visiblePeaks(vs)(Genetics_Browser_Track_Demo.filterSig(config.score)(Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(v1.gwas)));
-                    };
                     var initialView = Data_Newtype.wrap(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(new Data_Pair.Pair(Data_Semiring.zero(Data_BigInt.semiringBigInt), Data_Lens_Getter.viewOn(cSys)(Genetics_Browser_Types_Coordinates._TotalSize(Data_BigInt.ringBigInt))));
                     return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v2) {
                         return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
-                            btnScroll(5.0e-2)(v2)();
-                            btnZoom(0.1)(v2)();
-                            Genetics_Browser_Track_UI_Canvas.dragScroll(bc)(function (v3) {
-                                return Control_Applicative.when(Control_Monad_Eff.applicativeEff)($$Math.abs(v3.x) >= 1)(queueCmd(v2)(ScrollView.create(-v3.x / trackDims.width)));
+                            $foreign.resizeEvent(function (d) {
+                                return queueCmd(v2)(Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
+                                    return "docResize";
+                                }))(_docResize)(d));
                             })();
-                            return Genetics_Browser_Track_UI_Canvas.wheelZoom(bc)(function (dY) {
-                                return queueCmd(v2)(ZoomView.create(1.0 + 6.0e-2 * dY));
-                            })();
-                        }))(function () {
-                            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeVar(Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
+                            return queueCmd(v2)(Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
                                 return "render";
-                            }))(_render)(Data_Unit.unit)))(function (v3) {
-                                return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)($foreign.resizeEvent(function (d) {
-                                    return queueCmd(v3)(Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
-                                        return "docResize";
-                                    }))(_docResize)(d));
-                                })))(function () {
-                                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeVar(initialView))(function (v4) {
-                                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v5) {
-                                            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v6) {
-                                                var initState = {
-                                                    view: v4,
-                                                    viewCmd: v2,
-                                                    uiCmd: v3,
-                                                    renderFiber: v5,
-                                                    lastOverlaps: v6
-                                                };
+                            }))(_render)(Data_Unit.unit))();
+                        }))(function () {
+                            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeVar(initialView))(function (v3) {
+                                return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v4) {
+                                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.makeEmptyVar)(function (v5) {
+                                        var initState = {
+                                            view: v3,
+                                            uiCmd: v2,
+                                            renderFiber: v4,
+                                            lastOverlaps: v5
+                                        };
+                                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(uiViewUpdate(cSys)(Data_Newtype.wrap(Data_Time_Duration.newtypeMilliseconds)(100.0))(initState))(function (v6) {
+                                            return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
+                                                btnUI({
+                                                    scrollMod: 5.0e-2,
+                                                    zoomMod: 0.1
+                                                })(v6)();
+                                                Genetics_Browser_Track_UI_Canvas.dragScroll(bc)(function (v7) {
+                                                    return Control_Applicative.when(Control_Monad_Eff.applicativeEff)($$Math.abs(v7.x) >= 1)(v6(ScrollView.create(-v7.x / trackDims.width)));
+                                                })();
+                                                return Genetics_Browser_Track_UI_Canvas.wheelZoom(bc)(function (dY) {
+                                                    return v6(ZoomView.create(1.0 + 6.0e-2 * dY));
+                                                })();
+                                            }))(function () {
                                                 var slots = Genetics_Browser_Track_UI_Canvas.uiSlots(bc);
-                                                var sigSnps = Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(Data_Functor.map(Data_Maybe.functorMaybe)(Genetics_Browser_Track_Demo.filterSig(config.score))(v1.gwas));
-                                                var vscale = {
-                                                    width: slots.left.size.width,
-                                                    color: Color.black,
-                                                    min: config.score.min,
-                                                    max: config.score.max,
-                                                    sig: config.score.sig
-                                                };
-                                                var entries = Data_Foldable.foldMap(Data_Foldable.foldableMaybe)(Data_Monoid.monoidArray)(Genetics_Browser_Track_Demo.annotationLegendTest(Data_Foldable.foldableArray)(Data_Functor.functorArray))(v1.annotations);
+                                                var vscale = Data_Record_Builder.build(Control_Semigroupoid.composeFlipped(Data_Record_Builder.semigroupoidBuilder)(Data_Record_Builder.insert()(Type_Row.rowLacks()()()(Type_Row.rowLacking))(new Data_Symbol.IsSymbol(function () {
+                                                    return "width";
+                                                }))(Data_Symbol.SProxy.value)(slots.left.size.width))(Data_Record_Builder.insert()(Type_Row.rowLacks()()()(Type_Row.rowLacking))(new Data_Symbol.IsSymbol(function () {
+                                                    return "color";
+                                                }))(Data_Symbol.SProxy.value)(Color.black)))(config.score);
+                                                var sigSnps = Data_Foldable.foldMap(Data_Foldable.foldableMaybe)(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId))(Genetics_Browser_Track_Demo.filterSig(config.score))(v1.snps);
                                                 var legend = {
                                                     width: slots.right.size.width,
-                                                    entries: entries
+                                                    entries: Data_Foldable.foldMap(Data_Foldable.foldableMaybe)(Data_Monoid.monoidArray)(Genetics_Browser_Track_Demo.annotationLegendTest(Data_Foldable.foldableArray)(Data_Functor.functorArray))(v1.annotations)
                                                 };
                                                 var mainBrowser = Genetics_Browser_Track_Backend.drawBrowser(cSys)({
                                                     legend: legend,
                                                     vscale: vscale
                                                 })({
-                                                    gwas: Genetics_Browser_Track_Demo.renderGWAS(vscale),
+                                                    snps: Genetics_Browser_Track_Demo.renderSNPs(vscale),
                                                     annotations: Genetics_Browser_Track_Demo.renderAnnotation(cSys)(sigSnps)(vscale)
                                                 })({
-                                                    gwas: Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(v1.gwas),
+                                                    snps: Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(v1.snps),
                                                     annotations: Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(v1.annotations)
                                                 });
                                                 return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)((function () {
@@ -45386,16 +44780,20 @@ var runBrowser = function (config) {
                                                             return $foreign.setDebugDivPoint(p)();
                                                         };
                                                     };
-                                                    var findAnnot = function (r) {
-                                                        return Genetics_Browser_Track_Demo.annotationForSnp(r)(Data_Maybe.fromMaybe(Data_Monoid.mempty(Data_Map.monoidMap(Genetics_Browser_Types.ordChrId)))(v1.annotations));
+                                                    var annotAround = function (r) {
+                                                        return function (snp) {
+                                                            return Control_Bind.bindFlipped(Data_Maybe.bindMaybe)(Data_Foldable.find(Data_Foldable.foldableArray)(function (a) {
+                                                                return Genetics_Browser_Types_Coordinates.pairsOverlap(Genetics_Browser_Types.ordBp)(Genetics_Browser_Types_Coordinates.aroundPair(Genetics_Browser_Types.ringBp)(r)(a.position))(snp.position);
+                                                            }))(Control_Bind.bindFlipped(Data_Maybe.bindMaybe)(Data_Map.lookup(Genetics_Browser_Types.ordChrId)(snp.feature.chrId))(v1.annotations));
+                                                        };
                                                     };
                                                     var glyphClick = function (p) {
-                                                        return Control_Monad_Aff.launchAff_(Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.readVar(v4))(function (v7) {
-                                                            var vs = Genetics_Browser_Types_Coordinates.viewScale(Data_Lens_Getter.viewOn(bc)(function ($277) {
-                                                                return Genetics_Browser_Track_UI_Canvas._Track(Data_Lens_Internal_Forget.strongForget)(Genetics_Browser_Track_UI_Canvas._Dimensions(Genetics_Browser_Track_UI_Canvas.newtypeTrackCanvas)(Data_Lens_Internal_Forget.strongForget)($277));
+                                                        return Control_Monad_Aff.launchAff_(Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.readVar(v3))(function (v7) {
+                                                            var vs = Genetics_Browser_Types_Coordinates.viewScale(Data_Lens_Getter.viewOn(bc)(function ($266) {
+                                                                return Genetics_Browser_Track_UI_Canvas._Track(Data_Lens_Internal_Forget.strongForget)(Genetics_Browser_Track_UI_Canvas._Dimensions(Genetics_Browser_Track_UI_Canvas.newtypeTrackCanvas)(Data_Lens_Internal_Forget.strongForget)($266));
                                                             }))(v7);
                                                             var radius = Data_Newtype.wrap(Genetics_Browser_Types.newtypeBp)(Genetics_Browser_Types_Coordinates.xPerPixel(vs) * 3.75);
-                                                            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryReadVar(v6))(function (v9) {
+                                                            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryReadVar(v5))(function (v9) {
                                                                 if (v9 instanceof Data_Maybe.Nothing) {
                                                                     return Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
                                                                         Control_Monad_Eff_Console.log("clicked no glyphs")();
@@ -45404,7 +44802,7 @@ var runBrowser = function (config) {
                                                                 };
                                                                 if (v9 instanceof Data_Maybe.Just) {
                                                                     return Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)((function () {
-                                                                        var clicked = (v9.value0(1.0)(p)).gwas;
+                                                                        var clicked = (v9.value0(1.0)(p)).snps;
                                                                         return function __do() {
                                                                             printSNPInfo(clicked)();
                                                                             var v10 = Data_Array.head(clicked);
@@ -45414,13 +44812,13 @@ var runBrowser = function (config) {
                                                                             if (v10 instanceof Data_Maybe.Just) {
                                                                                 v(IBoxShow.value)();
                                                                                 v(IBoxSetX.create(Data_Int.round(p.x)))();
-                                                                                return v(IBoxSetContents.create(Data_Maybe.fromMaybe(snpHTML(v10.value0))(Data_Functor.map(Data_Maybe.functorMaybe)(annotationHTML)(findAnnot(radius)(v10.value0)))))();
+                                                                                return v(IBoxSetContents.create(Data_Maybe.fromMaybe(snpHTML(v10.value0))(Data_Functor.map(Data_Maybe.functorMaybe)(annotationHTMLAll)(annotAround(radius)(v10.value0)))))();
                                                                             };
-                                                                            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 688, column 16 - line 695, column 73: " + [ v10.constructor.name ]);
+                                                                            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 725, column 16 - line 732, column 78: " + [ v10.constructor.name ]);
                                                                         };
                                                                     })());
                                                                 };
-                                                                throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 680, column 44 - line 695, column 73: " + [ v9.constructor.name ]);
+                                                                throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 717, column 44 - line 732, column 78: " + [ v9.constructor.name ]);
                                                             });
                                                         }));
                                                     };
@@ -45432,31 +44830,9 @@ var runBrowser = function (config) {
                                                     });
                                                 })()))(function () {
                                                     return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)($foreign.setWindow("mainBrowser")(mainBrowser)))(function () {
-                                                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(Genetics_Browser_Track_Demo.getAnnotationsNew(cSys)("./data/annotations.json"))(function (v7) {
-                                                            var viewTimeout = Data_Newtype.wrap(Data_Time_Duration.newtypeMilliseconds)(100.0);
-                                                            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(uiViewUpdate(cSys)(viewTimeout)(initState)))(function (v8) {
-                                                                return Control_Bind.bind(Control_Monad_Aff.bindAff)(browserCache(mainBrowser))(function (v9) {
-                                                                    return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(renderLoop(cSys)(v9)(bc)(initState)))(function (v10) {
-                                                                        return Control_Bind.discard(Control_Bind.discardUnit)(Control_Monad_Aff.bindAff)(Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)(function __do() {
-                                                                            Control_Monad_Eff_Console.log("annotationfields:")();
-                                                                            return Control_Monad_Eff_Console.log(Data_Foldable.foldMap(Data_List_Types.foldableList)(Data_Monoid.monoidString)(function (v11) {
-                                                                                return v11 + ", ";
-                                                                            })(Genetics_Browser_Track_Demo.annotationFields(Data_Record_Extra.consKeys(new Data_Symbol.IsSymbol(function () {
-                                                                                return "chr";
-                                                                            }))(Data_Record_Extra.consKeys(new Data_Symbol.IsSymbol(function () {
-                                                                                return "gene";
-                                                                            }))(Data_Record_Extra.consKeys(new Data_Symbol.IsSymbol(function () {
-                                                                                return "name";
-                                                                            }))(Data_Record_Extra.consKeys(new Data_Symbol.IsSymbol(function () {
-                                                                                return "pos";
-                                                                            }))(Data_Record_Extra.consKeys(new Data_Symbol.IsSymbol(function () {
-                                                                                return "url";
-                                                                            }))(Data_Record_Extra.nilKeys))))))()))();
-                                                                        }))(function () {
-                                                                            return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Data_Unit.unit);
-                                                                        });
-                                                                    });
-                                                                });
+                                                        return Control_Bind.bind(Control_Monad_Aff.bindAff)(browserCache(mainBrowser))(function (v7) {
+                                                            return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff.forkAff(renderLoop(cSys)(v7)(bc)(initState)))(function (v8) {
+                                                                return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Data_Unit.unit);
                                                             });
                                                         });
                                                     });
@@ -45506,11 +44882,11 @@ var initBrowser = function (rawConfig) {
         }))(Simple_JSON.readMaybe(Simple_JSON.readString))(Simple_JSON.readFieldsCons(new Data_Symbol.IsSymbol(function () {
             return "genes";
         }))(Simple_JSON.readMaybe(Simple_JSON.readString))(Simple_JSON.readFieldsCons(new Data_Symbol.IsSymbol(function () {
-            return "gwas";
+            return "snps";
         }))(Simple_JSON.readMaybe(Simple_JSON.readString))(Simple_JSON.readFieldsNil)(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))()))(Simple_JSON.readFieldsNil)(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))())(Type_Row.rowLacks()()()(Type_Row.rowLacking))()))(rawConfig);
         if (v1 instanceof Data_Either.Left) {
-            return Data_Foldable.traverse_(Control_Monad_Eff.applicativeEff)(Data_List_Types.foldableNonEmptyList)(function ($278) {
-                return Control_Monad_Eff_Console.log(Data_Foreign.renderForeignError($278));
+            return Data_Foldable.traverse_(Control_Monad_Eff.applicativeEff)(Data_List_Types.foldableNonEmptyList)(function ($267) {
+                return Control_Monad_Eff_Console.log(Data_Foreign.renderForeignError($267));
             })(v1.value0)();
         };
         if (v1 instanceof Data_Either.Right) {
@@ -45528,86 +44904,44 @@ var initBrowser = function (rawConfig) {
                 Control_Monad_Eff_Console.log(Global_Unsafe.unsafeStringify(v1.value0))();
                 return Data_Functor["void"](Control_Monad_Eff.functorEff)(runBrowser(v1.value0)(v3))();
             };
-            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 753, column 7 - line 764, column 33: " + [ v.constructor.name ]);
+            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 777, column 7 - line 788, column 33: " + [ v.constructor.name ]);
         };
-        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 750, column 3 - line 764, column 33: " + [ v1.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 774, column 3 - line 788, column 33: " + [ v1.constructor.name ]);
     };
-};
-var _PairRec = function (dictProfunctor) {
-    return Data_Lens_Iso.iso(function (v) {
-        return {
-            l: v.value0,
-            r: v.value1
-        };
-    })(function (v) {
-        return new Data_Pair.Pair(v.l, v.r);
-    })(dictProfunctor);
-};
-var debugView = function (s) {
-    var get = function (name) {
-        return Control_Monad_Aff.launchAff_(Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryReadVar(s.view))(function (v) {
-            return Control_Monad_Eff_Class.liftEff(Control_Monad_Aff.monadEffAff)((function () {
-                if (v instanceof Data_Maybe.Nothing) {
-                    return function __do() {
-                        Control_Monad_Eff_Console.log("CoordSysView state empty")();
-                        return $foreign.setWindow(name)(Data_Unit.unit)();
-                    };
-                };
-                if (v instanceof Data_Maybe.Just) {
-                    return function __do() {
-                        Control_Monad_Eff_Console.log("CoordSysView: " + Data_Show.show(Data_Pair.showPair(Data_Show.showString))(Data_Functor.map(Data_Pair.functorPair)(Data_BigInt.toString)(Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(v.value0))))();
-                        return $foreign.setWindow(name)(Data_Lens_Getter.viewOn(Data_Newtype.unwrap(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(v.value0))(_PairRec(Data_Lens_Internal_Forget.profunctorForget)))();
-                    };
-                };
-                throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 194, column 18 - line 200, column 51: " + [ v.constructor.name ]);
-            })());
-        }));
-    };
-    var set = function (lr) {
-        return Control_Monad_Aff.launchAff_(Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryTakeVar(s.view))(function (v) {
-            if (v instanceof Data_Maybe.Nothing) {
-                return Control_Applicative.pure(Control_Monad_Aff.applicativeAff)(Data_Unit.unit);
-            };
-            if (v instanceof Data_Maybe.Just) {
-                var v$prime = Data_Newtype.wrap(Genetics_Browser_Types_Coordinates.coordsysviewNewtype)(Data_Lens_Getter.viewOn(lr)(Data_Lens_Iso.re(_PairRec(Data_Lens_Internal_Re.profunctorRe(Data_Lens_Internal_Forget.profunctorForget)))));
-                return Control_Bind.bind(Control_Monad_Aff.bindAff)(Control_Monad_Aff_AVar.tryPutVar(Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
-                    return "render";
-                }))(_render)(Data_Unit.unit))(s.uiCmd))(function (v1) {
-                    return Control_Monad_Aff_AVar.putVar(v$prime)(s.view);
-                });
-            };
-            throw new Error("Failed pattern match at Genetics.Browser.Track.UI line 204, column 10 - line 209, column 35: " + [ v.constructor.name ]);
-        }));
-    };
-    return Control_Applicative.pure(Control_Monad_Eff.applicativeEff)({
-        get: get,
-        set: set
-    });
 };
 module.exports = {
+    initBStateRecordImpl: initBStateRecordImpl,
+    readBStateRecordImpl: readBStateRecordImpl,
     ScrollView: ScrollView,
     ZoomView: ZoomView,
     ModView: ModView,
     updateViewFold: updateViewFold,
-    uiViewUpdate: uiViewUpdate,
     queueCmd: queueCmd,
-    btnScroll: btnScroll,
-    btnZoom: btnZoom,
+    uiViewUpdate: uiViewUpdate,
+    btnUI: btnUI,
     _render: _render,
     _docResize: _docResize,
-    _PairRec: _PairRec,
+    readBStateField: readBStateField,
+    "readBStateField'": readBStateField$prime,
+    updateBStateField: updateBStateField,
+    initBStateRecord: initBStateRecord,
+    InitBStateRecord: InitBStateRecord,
+    readBStateRecord: readBStateRecord,
+    ReadBStateRecord: ReadBStateRecord,
+    BCmd: BCmd,
+    bCmd: bCmd,
+    takeBCmd: takeBCmd,
+    queueBCmd: queueBCmd,
+    "queueBCmd'": queueBCmd$prime,
     debugView: debugView,
-    AffCache: AffCache,
-    cacheFun: cacheFun,
-    "cacheFun'": cacheFun$prime,
-    cached: cached,
-    "browserCache'": browserCache$prime,
     browserCache: browserCache,
     renderLoop: renderLoop,
     printSNPInfo: printSNPInfo,
     wrapWith: wrapWith,
     snpHTML: snpHTML,
     annotationHTML: annotationHTML,
+    annotationHTMLAll: annotationHTMLAll,
+    annotationHTMLAnnoOnly: annotationHTMLAnnoOnly,
     IBoxShow: IBoxShow,
     IBoxHide: IBoxHide,
     IBoxSetY: IBoxSetY,
@@ -45620,20 +44954,19 @@ module.exports = {
     initBrowser: initBrowser,
     chunkConsumer: chunkConsumer,
     fetchLoop1: fetchLoop1,
-    fetchLoop: fetchLoop,
     mouseChrSizes: mouseChrSizes,
     showUpdateView: showUpdateView,
     semigroupUpdateView: semigroupUpdateView,
     monoidUpdateView: monoidUpdateView,
-    newtypeAffCache: newtypeAffCache,
-    genericAffCache: genericAffCache,
-    functorAffCache: functorAffCache,
+    initBStateRecordNil: initBStateRecordNil,
+    initBStateRecordCons: initBStateRecordCons,
+    readBStateRecordNil: readBStateRecordNil,
+    readBStateRecordCons: readBStateRecordCons,
     genericInfoBoxF: genericInfoBoxF,
     showInfoBoxF: showInfoBoxF,
     windowInnerSize: $foreign.windowInnerSize,
     buttonEvent: $foreign.buttonEvent,
     resizeEvent: $foreign.resizeEvent,
-    timeEff: $foreign.timeEff,
     initDebugDiv: $foreign.initDebugDiv,
     setDebugDivVisibility: $foreign.setDebugDivVisibility,
     setDebugDivPoint: $foreign.setDebugDivPoint,
@@ -45641,8 +44974,7 @@ module.exports = {
     setWindow: $foreign.setWindow
 };
 
-},{"../Color":5,"../Control.Applicative":8,"../Control.Apply":10,"../Control.Bind":14,"../Control.Category":15,"../Control.Coroutine":18,"../Control.Monad.Aff":26,"../Control.Monad.Aff.AVar":22,"../Control.Monad.Eff":46,"../Control.Monad.Eff.Class":31,"../Control.Monad.Eff.Console":33,"../Control.Monad.Eff.Exception":36,"../Control.Monad.Rec.Class":59,"../Control.Semigroupoid":74,"../DOM.Classy.Element":75,"../DOM.Classy.HTMLElement":76,"../DOM.Classy.Node":77,"../DOM.Classy.ParentNode":78,"../DOM.HTML":90,"../DOM.HTML.Types":86,"../DOM.HTML.Window":88,"../DOM.Node.Document":92,"../DOM.Node.ParentNode":99,"../DOM.Node.Types":100,"../Data.Array":124,"../Data.Bifunctor":132,"../Data.BigInt":134,"../Data.Either":146,"../Data.Eq":149,"../Data.EuclideanRing":151,"../Data.Foldable":156,"../Data.Foreign":169,"../Data.Function":173,"../Data.Functor":179,"../Data.Generic.Rep":183,"../Data.Generic.Rep.Show":182,"../Data.HeytingAlgebra":188,"../Data.Int":193,"../Data.Lens":224,"../Data.Lens.Getter":198,"../Data.Lens.Internal.Forget":203,"../Data.Lens.Internal.Re":207,"../Data.Lens.Iso":213,"../Data.List.Types":228,"../Data.Map":230,"../Data.Maybe":233,"../Data.Monoid":242,"../Data.Newtype":244,"../Data.Ord":253,"../Data.Pair":255,"../Data.Record.Extra":266,"../Data.Ring":271,"../Data.Semigroup":275,"../Data.Semiring":277,"../Data.Show":280,"../Data.Symbol":292,"../Data.Time.Duration":293,"../Data.Traversable":297,"../Data.Tuple":299,"../Data.Unit":303,"../Data.Variant":306,"../Genetics.Browser.Track.Backend":310,"../Genetics.Browser.Track.Demo":312,"../Genetics.Browser.Track.UI.Canvas":314,"../Genetics.Browser.Types":318,"../Genetics.Browser.Types.Coordinates":317,"../Global.Unsafe":320,"../Graphics.Canvas":324,"../Graphics.Drawing":326,"../Math":328,"../Partial.Unsafe":337,"../Prelude":340,"../Simple.JSON":341,"../Type.Row":352,"../Unsafe.Coerce":354,"./foreign":315}],317:[function(require,module,exports){
-// Generated by purs version 0.11.7
+},{"../Color":5,"../Control.Applicative":8,"../Control.Apply":10,"../Control.Bind":14,"../Control.Category":15,"../Control.Coroutine":18,"../Control.Monad.Aff":26,"../Control.Monad.Aff.AVar":22,"../Control.Monad.Eff":46,"../Control.Monad.Eff.Class":31,"../Control.Monad.Eff.Console":33,"../Control.Monad.Eff.Exception":36,"../Control.Monad.Rec.Class":59,"../Control.Semigroupoid":74,"../DOM.Classy.Element":75,"../DOM.Classy.HTMLElement":76,"../DOM.Classy.Node":77,"../DOM.Classy.ParentNode":78,"../DOM.HTML":90,"../DOM.HTML.Types":86,"../DOM.HTML.Window":88,"../DOM.Node.Document":92,"../DOM.Node.ParentNode":99,"../DOM.Node.Types":100,"../Data.Array":124,"../Data.Bifunctor":132,"../Data.BigInt":134,"../Data.Boolean":136,"../Data.Either":146,"../Data.Eq":149,"../Data.EuclideanRing":151,"../Data.Filterable":154,"../Data.Foldable":156,"../Data.Foreign":169,"../Data.Function":173,"../Data.Functor":179,"../Data.Generic.Rep":183,"../Data.Generic.Rep.Show":182,"../Data.HeytingAlgebra":188,"../Data.Int":193,"../Data.Lens":224,"../Data.Lens.Getter":198,"../Data.Lens.Internal.Forget":203,"../Data.List.Types":228,"../Data.Map":230,"../Data.Maybe":233,"../Data.Monoid":242,"../Data.Newtype":244,"../Data.Ord":253,"../Data.Pair":255,"../Data.Record":269,"../Data.Record.Builder":265,"../Data.Record.Extra":266,"../Data.Record.Unsafe":268,"../Data.Ring":271,"../Data.Semigroup":275,"../Data.Semiring":277,"../Data.Show":280,"../Data.Symbol":292,"../Data.Time.Duration":293,"../Data.Traversable":297,"../Data.Tuple":299,"../Data.Unit":303,"../Data.Variant":306,"../Genetics.Browser.Track.Backend":310,"../Genetics.Browser.Track.Demo":312,"../Genetics.Browser.Track.UI.Canvas":314,"../Genetics.Browser.Types":318,"../Genetics.Browser.Types.Coordinates":317,"../Global.Unsafe":320,"../Graphics.Canvas":324,"../Graphics.Drawing":326,"../Math":328,"../Partial.Unsafe":337,"../Prelude":340,"../Simple.JSON":341,"../Type.Prelude":350,"../Type.Row":352,"../Unsafe.Coerce":354,"./foreign":315}],317:[function(require,module,exports){
 "use strict";
 var Control_Semigroupoid = require("../Control.Semigroupoid");
 var Data_Array = require("../Data.Array");
@@ -45660,35 +44992,53 @@ var Data_Lens_Getter = require("../Data.Lens.Getter");
 var Data_Lens_Internal_Forget = require("../Data.Lens.Internal.Forget");
 var Data_Lens_Iso_Newtype = require("../Data.Lens.Iso.Newtype");
 var Data_Lens_Lens_Tuple = require("../Data.Lens.Lens.Tuple");
+var Data_List = require("../Data.List");
+var Data_List_Types = require("../Data.List.Types");
 var Data_Map = require("../Data.Map");
 var Data_Maybe = require("../Data.Maybe");
+var Data_Monoid = require("../Data.Monoid");
 var Data_Monoid_Additive = require("../Data.Monoid.Additive");
 var Data_Monoid_Endo = require("../Data.Monoid.Endo");
 var Data_Newtype = require("../Data.Newtype");
 var Data_Ord = require("../Data.Ord");
 var Data_Pair = require("../Data.Pair");
+var Data_Record = require("../Data.Record");
 var Data_Ring = require("../Data.Ring");
 var Data_Semiring = require("../Data.Semiring");
+var Data_Set = require("../Data.Set");
+var Data_Symbol = require("../Data.Symbol");
 var Data_Traversable = require("../Data.Traversable");
 var Data_Tuple = require("../Data.Tuple");
 var Data_Unfoldable = require("../Data.Unfoldable");
+var Data_Unit = require("../Data.Unit");
 var Genetics_Browser_Types = require("../Genetics.Browser.Types");
 var Global_Unsafe = require("../Global.Unsafe");
 var Prelude = require("../Prelude");
+var Type_Prelude = require("../Type.Prelude");
+var Type_Row = require("../Type.Row");
 var ViewScale = function (x) {
     return x;
 };
-var SegmentsRecord = function (x) {
-    return x;
-};
+
+// | Newtype for representing values normalized to fit in some range
 var Normalized = function (x) {
     return x;
 };
 var CoordSysView = function (x) {
     return x;
 };
+
+// | A coordinate system is defined by a set of segments,
+// | which are defined by (mutually exclusive and contiguous) intervals
+// | over the browser coordinates (BigInt in most cases)
 var CoordSys = function (x) {
     return x;
+};
+
+// test :: Set Int
+// test = leastCommonKey { aa, bb, cc }
+var LeastCommonKey = function (leastCommonKeyImpl) {
+    this.leastCommonKeyImpl = leastCommonKeyImpl;
 };
 var xPerPixel = function (v) {
     return Data_BigInt.toNumber(v.coordWidth) / v.pixelWidth;
@@ -45699,6 +45049,11 @@ var scaleToScreen$prime = function (v) {
         return Data_BigInt.toNumber(x) * (v.pixelWidth / Data_BigInt.toNumber(v.coordWidth));
     };
 };
+
+// | Given the width of the display in pixels, and how much of the coordinate system
+// | that is currently visible, scale a point in the coordinate system
+// | to the screen.
+// | Always uses zero as the origin -- points scaled with this must still be translated!
 var scaleToScreen = function (v) {
     return function (x) {
         return Data_BigInt.toNumber(x) * (v.screenWidth / Data_BigInt.toNumber(v.viewWidth));
@@ -45709,6 +45064,11 @@ var scaleToGlobal$prime = function (v) {
         return Data_BigInt.fromNumber(x * (Data_BigInt.toNumber(v.coordWidth) / v.pixelWidth));
     };
 };
+
+// | Given the width of the display in pixels, and how much of the coordinate system
+// | that is currently visible, scale a point given in pixels from the left-hand edge
+// | to browser units from the beginning of the browser.
+// | Always uses zero as the origin -- points scaled with this must still be translated!
 var scaleToGlobal = function (v) {
     return function (x) {
         return Data_BigInt.fromNumber(x * (Data_BigInt.toNumber(v.viewWidth) / v.screenWidth));
@@ -45728,6 +45088,9 @@ var pixelsView = function (vs) {
         return new Data_Pair.Pair(f(v.value0), f(v.value1));
     };
 };
+
+// TODO test this one
+// | Helper function for defining predicates on pairs that overlap with a given pair.
 var pairsOverlap = function (dictOrd) {
     return function (v) {
         return function (v1) {
@@ -45737,11 +45100,18 @@ var pairsOverlap = function (dictOrd) {
         };
     };
 };
+
+// | The global coordinate system works by taking the sum of the chromosome sizes,
+// | for now mainly represented as a BigInt, as an Int representation may overflow.
+// | Subsets of the global coordinate system are defined by some interval, namely a Pair of Ints
+// | Helper function to calculate the size of the stretch covered by a pair.
 var pairSize = function (dictRing) {
     return function (v) {
         return Data_Ring.sub(dictRing)(v.value1)(v.value0);
     };
 };
+
+// | Scale an Int pair by changing its length to be `x` times the pair size.
 var scalePairBy = function (p) {
     return function (x) {
         var x$prime = Data_Ord.max(Data_Ord.ordNumber)(0)(x);
@@ -45756,6 +45126,8 @@ var scaleViewBy = function (v) {
         return CoordSysView(scalePairBy(v)(x));
     };
 };
+
+// TODO test that this is idempotent
 var setViewWidth = function (newW) {
     return function (v) {
         var oldW = pairSize(Data_BigInt.ringBigInt)(v);
@@ -45763,6 +45135,11 @@ var setViewWidth = function (newW) {
         return new Data_Pair.Pair(Data_Ring.sub(Data_BigInt.ringBigInt)(v.value0)(d), Data_Semiring.add(Data_BigInt.semiringBigInt)(v.value1)(d));
     };
 };
+
+// | Helper functions for translating and scaling pairs.
+// | They're concretized to `BigInt` for convenience; in truth they would
+// | probably fit better in the UI module.
+// | Translate an BigInt pair to the right by `x` times its size.
 var translatePairBy = function (p) {
     return function (x) {
         var delta = Data_BigInt.fromNumber(x * Data_BigInt.toNumber(pairSize(Data_BigInt.ringBigInt)(p)));
@@ -45795,6 +45172,15 @@ var normalizePoint = function (s) {
         };
     };
 };
+var normalize = function (dictEuclideanRing) {
+    return function (x0) {
+        return function (x1) {
+            return function (t) {
+                return Data_EuclideanRing.div(dictEuclideanRing)(Data_Ring.sub((dictEuclideanRing.CommutativeRing0()).Ring0())(t)(x0))(Data_Ring.sub((dictEuclideanRing.CommutativeRing0()).Ring0())(x1)(x0));
+            };
+        };
+    };
+};
 var newtypeNormalized = new Data_Newtype.Newtype(function (n) {
     return n;
 }, Normalized);
@@ -45808,6 +45194,60 @@ var withCoordSys = function (dictOrd) {
         };
     };
 };
+var lerp = function (dictRing) {
+    return function (x0) {
+        return function (x1) {
+            return function (t) {
+                return Data_Semiring.add(dictRing.Semiring0())(Data_Semiring.mul(dictRing.Semiring0())(Data_Ring.sub(dictRing)(Data_Semiring.one(dictRing.Semiring0()))(t))(x0))(Data_Semiring.mul(dictRing.Semiring0())(t)(x1));
+            };
+        };
+    };
+};
+var leastCommonKeyOne = function (dictIsSymbol) {
+    return function (dictRowCons) {
+        return new LeastCommonKey(function (dictOrd) {
+            return function (v) {
+                return function (r) {
+                    return Data_Set.fromFoldable(Data_List_Types.foldableList)(dictOrd)(Data_Map.keys(Data_Record.get(dictIsSymbol)(dictRowCons)(Data_Symbol.SProxy.value)(r)));
+                };
+            };
+        });
+    };
+};
+var leastCommonKeyNil = new LeastCommonKey(function (dictOrd) {
+    return function (v) {
+        return function (v1) {
+            return Data_Monoid.mempty(Data_Set.monoidSet(dictOrd));
+        };
+    };
+});
+var leastCommonKeyImpl = function (dict) {
+    return dict.leastCommonKeyImpl;
+};
+var leastCommonKeyCons = function (dictIsSymbol) {
+    return function (dictRowCons) {
+        return function (dictRowLacks) {
+            return function (dictLeastCommonKey) {
+                return new LeastCommonKey(function (dictOrd) {
+                    return function (v) {
+                        return function (r) {
+                            return Data_Set.intersection(dictOrd)(Data_Set.fromFoldable(Data_List_Types.foldableList)(dictOrd)(Data_Map.keys(Data_Record.get(dictIsSymbol)(dictRowCons)(Data_Symbol.SProxy.value)(r))))(leastCommonKeyImpl(dictLeastCommonKey)(dictOrd)(Type_Row.RLProxy.value)(Data_Record["delete"](dictIsSymbol)(dictRowLacks)(dictRowCons)(Data_Symbol.SProxy.value)(r)));
+                        };
+                    };
+                });
+            };
+        };
+    };
+};
+var leastCommonKey = function (dictOrd) {
+    return function (dictRowToList) {
+        return function (dictLeastCommonKey) {
+            return leastCommonKeyImpl(dictLeastCommonKey)(dictOrd)(Type_Row.RLProxy.value);
+        };
+    };
+};
+
+// | Helper function for defining predicates on pairs that contain a given point.
 var inPair = function (dictOrd) {
     return function (p) {
         return function (v) {
@@ -45820,6 +45260,8 @@ var genericCoordSys = new Data_Generic_Rep.Generic(function (x) {
 }, function (x) {
     return x;
 });
+
+// | The `Functor` instance maps over the segment borders.
 var functorCoordSys = new Data_Functor.Functor(function (f) {
     return function (v) {
         return CoordSys(Data_Functor.map(Data_Map.functorMap)(Data_Functor.map(Data_Pair.functorPair)(f))(v));
@@ -45833,11 +45275,17 @@ var eqViewScale = new Data_Eq.Eq(function (x) {
 var coordsysviewNewtype = new Data_Newtype.Newtype(function (n) {
     return n;
 }, CoordSysView);
+
+// | A coordinate system is created by providing an array of pairs of
+// | chromosome/segment name (often in the ChrId newtype) and their
+// | respective sizes.
 var coordSys = function (dictOrd) {
     return function (dictSemiring) {
         return function (segs) {
             var v = Data_Array.unzip(segs);
-            var offsets = function (xs) {
+            
+            // Given an array of sizes, produce an array of contiguous intervals.
+var offsets = function (xs) {
                 var os = Data_Traversable.scanl(Data_Traversable.traversableArray)(function (x) {
                     return function (y) {
                         return Data_Semiring.add(dictSemiring)(x)(y);
@@ -45849,6 +45297,8 @@ var coordSys = function (dictOrd) {
         };
     };
 };
+var cc = Data_Map.fromFoldable(Data_Ord.ordInt)(Data_Foldable.foldableArray)(Data_Functor.map(Data_Functor.functorArray)(Data_Function.flip(Data_Tuple.Tuple.create)(Data_Unit.unit))([ 3, 4, 5, 7 ]));
+var bb = Data_Map.fromFoldable(Data_Ord.ordInt)(Data_Foldable.foldableArray)(Data_Functor.map(Data_Functor.functorArray)(Data_Function.flip(Data_Tuple.Tuple.create)(Data_Unit.unit))([ 1, 2, 3, 4, 5 ]));
 var aroundPair = function (dictRing) {
     return function (radius) {
         return function (v) {
@@ -45863,14 +45313,36 @@ var around = function (dictRing) {
         };
     };
 };
+var aa = Data_Map.fromFoldable(Data_Ord.ordInt)(Data_Foldable.foldableArray)(Data_Functor.map(Data_Functor.functorArray)(Data_Function.flip(Data_Tuple.Tuple.create)(Data_Unit.unit))([ 1, 3, 5, 7, 9 ]));
+var ass = function (dictRowToList) {
+    return function (dictLeastCommonKey) {
+        return leastCommonKey(Data_Ord.ordInt)()(leastCommonKeyCons(new Data_Symbol.IsSymbol(function () {
+            return "a";
+        }))()(Type_Row.rowLacks()()()(Type_Row.rowLacking))(leastCommonKeyCons(new Data_Symbol.IsSymbol(function () {
+            return "b";
+        }))()(Type_Row.rowLacks()()()(Type_Row.rowLacking))(leastCommonKeyCons(new Data_Symbol.IsSymbol(function () {
+            return "c";
+        }))()(Type_Row.rowLacks()()()(Type_Row.rowLacking))(leastCommonKeyNil))))({
+            a: aa,
+            b: bb,
+            c: cc
+        });
+    };
+};
+
+// | Lens to the segments in a coordinate system.
 var _Segments = function (dictStrong) {
     return Data_Lens_Iso_Newtype._Newtype(newtypeCoordSys)(newtypeCoordSys)(dictStrong.Profunctor0());
 };
+
+// | A Getter' to retrieve the total size of the coordinate system by summing its parts.
 var _TotalSize = function (dictRing) {
-    return function ($141) {
-        return _Segments(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Getter.to(Data_Newtype.alaF(Data_Functor.functorFn)(Data_Functor.functorFn)(Data_Monoid_Additive.newtypeAdditive)(Data_Monoid_Additive.newtypeAdditive)(Data_Monoid_Additive.Additive)(Data_Foldable.foldMap(Data_Map.foldableMap)(Data_Monoid_Additive.monoidAdditive(dictRing.Semiring0())))(pairSize(dictRing)))($141));
+    return function ($161) {
+        return _Segments(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Getter.to(Data_Newtype.alaF(Data_Functor.functorFn)(Data_Functor.functorFn)(Data_Monoid_Additive.newtypeAdditive)(Data_Monoid_Additive.newtypeAdditive)(Data_Monoid_Additive.Additive)(Data_Foldable.foldMap(Data_Map.foldableMap)(Data_Monoid_Additive.monoidAdditive(dictRing.Semiring0())))(pairSize(dictRing)))($161));
     };
 };
+
+// TODO test that this is idempotent
 var normalizeView = function (cs) {
     return function (minWidth) {
         return function (csv) {
@@ -45892,26 +45364,85 @@ var normalizeView = function (cs) {
                 if (!v3 && !v2) {
                     return new Data_Pair.Pair(v.value0, v.value1);
                 };
-                throw new Error("Failed pattern match at Genetics.Browser.Types.Coordinates line 263, column 22 - line 267, column 39: " + [ v3.constructor.name, v2.constructor.name ]);
+                throw new Error("Failed pattern match at Genetics.Browser.Types.Coordinates line 367, column 22 - line 371, column 39: " + [ v3.constructor.name, v2.constructor.name ]);
             })();
             var vr$prime = setViewWidth(Data_Ord.min(Data_BigInt.ordBigInt)(limR)(Data_Ord.max(Data_BigInt.ordBigInt)(width)(minWidth)))(new Data_Pair.Pair(v1.value0, v1.value1));
             return vr$prime;
         };
     };
 };
+
+/**
+ * 
+ * 
+ * class FoldMapSegments
+ *   ( lMaps :: RowList )
+ *   ( lArgs :: RowList )
+ *   ( rMaps :: # Type  )
+ *   ( rArgs :: # Type  )
+ *   | lMaps -> rMaps
+ *   , lArgs -> rArgs
+ *   where
+ *     foldMapSegmentsImpl :: ∀ i c m.
+ *                            Ord i
+ *                         => RLProxy lMaps
+ *                         -> RLProxy lArgs
+ *                         -> CoordSys i c
+ *                         -> Record rMaps
+ *                         -> ((Record rArgs) -> m)
+ *                         -> Map i m
+ * 
+ * 
+ * 
+ * instance foldMapSegmentsNil
+ *   :: FoldMapSegments lMaps Nil rMaps rArgs m
+ *   where foldMapSegmentsImpl _ _ _ _ _ = mempty
+ * 
+ * 
+ * instance foldMapSegmentsCons
+ *   :: ( IsSymbol name
+ *      , RowCons name (Map i a) x rMaps
+ *      , RowCons name a  rArgsT rArgs
+ *      , RowLacks name rArgsT
+ *      , FoldMapSegments tMaps tArgs rMaps rArgsT
+ *      )
+ *   => FoldMapSegments (Cons name (Map i a) tMaps)
+ *                      (Cons name a tArgs)
+ *                      rMaps rArgs
+ *   where foldMapSegmentsImpl _ _ cSys maps
+ * 
+ *         
+ */
+// withSegs :: ∀ i c a.
+//             CoordSys i c
+//          -> Map i a
+//          ->
+// | Attempt to parse a String into a chromosome identifier,
+// | succeeding if there is a corresponding ChrId in the provided coordinate system
+// parseChrId :: forall a.
+//               CoordSys ChrId a
+//            -> String
+//            -> Maybe ChrId
+// parseChrId cs chr =
+//   let chr' = chrId chr
+//   in maybeBool (flip member (cs ^. _Segments)) chr'
+// | Given a coordinate system and a point, find the segment that contains the point, if any.
 var lookupSegment = function (dictOrd) {
     return function (cs) {
         return function (x) {
-            var pred = Data_Lens_Getter.view(function ($142) {
-                return Data_Lens_Lens_Tuple._2(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Getter.to(inPair(dictOrd)(x))($142));
+            var pred = Data_Lens_Getter.view(function ($162) {
+                return Data_Lens_Lens_Tuple._2(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Getter.to(inPair(dictOrd)(x))($162));
             });
-            var array = Data_Lens_Getter.viewOn(cs)(function ($143) {
-                return _Segments(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Getter.to(Data_Map.toUnfoldable(Data_Unfoldable.unfoldableArray))($143));
+            var array = Data_Lens_Getter.viewOn(cs)(function ($163) {
+                return _Segments(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Getter.to(Data_Map.toUnfoldable(Data_Unfoldable.unfoldableArray))($163));
             });
             return Data_Lens_Fold.findOf(Data_Lens_Fold.folded(Data_Monoid_Endo.monoidEndo)(Data_Foldable.foldableArray))(pred)(array);
         };
     };
 };
+
+// | Given a coordinate system and browser scale,
+// | return the browser segments scaled to canvas coordinates.
 var scaledSegments = function (cs) {
     return function (scale) {
         return Data_Functor.map(Data_Map.functorMap)(Data_Functor.map(Data_Pair.functorPair)(scaleToScreen(scale)))(Data_Lens_Getter.viewOn(cs)(_Segments(Data_Lens_Internal_Forget.strongForget)));
@@ -45922,6 +45453,8 @@ var scaledSegments$prime = function (cs) {
         return Data_Functor.map(Data_Map.functorMap)(Data_Functor.map(Data_Pair.functorPair)(scaleToScreen$prime(scale)))(Data_Lens_Getter.viewOn(cs)(_Segments(Data_Lens_Internal_Forget.strongForget)));
     };
 };
+
+// | Given a coordinate system and a range, find the segments that overlap, even partially, with the range.
 var segmentsInPair = function (dictOrd) {
     return function (dictOrd1) {
         return function (cs) {
@@ -45933,12 +45466,15 @@ var segmentsInPair = function (dictOrd) {
         };
     };
 };
+
+// | A Getter' into the size of a segment.
 var _SegmentSize = function (dictRing) {
-    return function ($144) {
-        return Data_Lens_Lens_Tuple._2(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Getter.to(pairSize(dictRing))($144));
+    return function ($164) {
+        return Data_Lens_Lens_Tuple._2(Data_Lens_Internal_Forget.strongForget)(Data_Lens_Getter.to(pairSize(dictRing))($164));
     };
 };
 module.exports = {
+    leastCommonKeyImpl: leastCommonKeyImpl,
     pairSize: pairSize,
     inPair: inPair,
     pairsOverlap: pairsOverlap,
@@ -45947,13 +45483,18 @@ module.exports = {
     Normalized: Normalized,
     normalizePoint: normalizePoint,
     rescalePoint: rescalePoint,
-    SegmentsRecord: SegmentsRecord,
     CoordSys: CoordSys,
     withCoordSys: withCoordSys,
     _Segments: _Segments,
     _TotalSize: _TotalSize,
     _SegmentSize: _SegmentSize,
     coordSys: coordSys,
+    aa: aa,
+    bb: bb,
+    cc: cc,
+    leastCommonKey: leastCommonKey,
+    ass: ass,
+    LeastCommonKey: LeastCommonKey,
     lookupSegment: lookupSegment,
     segmentsInPair: segmentsInPair,
     ViewScale: ViewScale,
@@ -45974,16 +45515,20 @@ module.exports = {
     translateViewBy: translateViewBy,
     scalePairBy: scalePairBy,
     scaleViewBy: scaleViewBy,
+    lerp: lerp,
+    normalize: normalize,
     newtypeNormalized: newtypeNormalized,
     functorCoordSys: functorCoordSys,
     newtypeCoordSys: newtypeCoordSys,
     genericCoordSys: genericCoordSys,
+    leastCommonKeyNil: leastCommonKeyNil,
+    leastCommonKeyOne: leastCommonKeyOne,
+    leastCommonKeyCons: leastCommonKeyCons,
     eqViewScale: eqViewScale,
     coordsysviewNewtype: coordsysviewNewtype
 };
 
-},{"../Control.Semigroupoid":74,"../Data.Array":124,"../Data.BigInt":134,"../Data.Eq":149,"../Data.EuclideanRing":151,"../Data.Foldable":156,"../Data.Function":173,"../Data.Functor":179,"../Data.Generic.Rep":183,"../Data.HeytingAlgebra":188,"../Data.Lens":224,"../Data.Lens.Fold":197,"../Data.Lens.Getter":198,"../Data.Lens.Internal.Forget":203,"../Data.Lens.Iso.Newtype":212,"../Data.Lens.Lens.Tuple":214,"../Data.Map":230,"../Data.Maybe":233,"../Data.Monoid.Additive":236,"../Data.Monoid.Endo":240,"../Data.Newtype":244,"../Data.Ord":253,"../Data.Pair":255,"../Data.Ring":271,"../Data.Semiring":277,"../Data.Traversable":297,"../Data.Tuple":299,"../Data.Unfoldable":301,"../Genetics.Browser.Types":318,"../Global.Unsafe":320,"../Prelude":340}],318:[function(require,module,exports){
-// Generated by purs version 0.11.7
+},{"../Control.Semigroupoid":74,"../Data.Array":124,"../Data.BigInt":134,"../Data.Eq":149,"../Data.EuclideanRing":151,"../Data.Foldable":156,"../Data.Function":173,"../Data.Functor":179,"../Data.Generic.Rep":183,"../Data.HeytingAlgebra":188,"../Data.Lens":224,"../Data.Lens.Fold":197,"../Data.Lens.Getter":198,"../Data.Lens.Internal.Forget":203,"../Data.Lens.Iso.Newtype":212,"../Data.Lens.Lens.Tuple":214,"../Data.List":229,"../Data.List.Types":228,"../Data.Map":230,"../Data.Maybe":233,"../Data.Monoid":242,"../Data.Monoid.Additive":236,"../Data.Monoid.Endo":240,"../Data.Newtype":244,"../Data.Ord":253,"../Data.Pair":255,"../Data.Record":269,"../Data.Ring":271,"../Data.Semiring":277,"../Data.Set":278,"../Data.Symbol":292,"../Data.Traversable":297,"../Data.Tuple":299,"../Data.Unfoldable":301,"../Data.Unit":303,"../Genetics.Browser.Types":318,"../Global.Unsafe":320,"../Prelude":340,"../Type.Prelude":350,"../Type.Row":352}],318:[function(require,module,exports){
 "use strict";
 var Control_Category = require("../Control.Category");
 var Data_CommutativeRing = require("../Data.CommutativeRing");
@@ -46004,16 +45549,31 @@ var Data_Semigroup = require("../Data.Semigroup");
 var Data_Semiring = require("../Data.Semiring");
 var Data_Show = require("../Data.Show");
 var Data_String = require("../Data.String");
+var $$Math = require("../Math");
 var Prelude = require("../Prelude");
+var NegLog10 = function (x) {
+    return x;
+};
+
+// | Newtype wrapper for a megabasepair location
 var MBp = function (x) {
     return x;
 };
+
+// | Newtype wrapper for a chromosome identifier
 var ChrId = function (x) {
     return x;
 };
+
+// TODO be *really cool* and represent it as a ratio of bp and pixels
+// i.e. just a tuple!
+// also it doesn't mean anything on its own;
+// or, rather, it's implicit that it only concerns a single chr at origin
 var BpPerPixel = function (x) {
     return x;
 };
+
+// | Newtype wrapper for a basepair location
 var Bp = function (x) {
     return x;
 };
@@ -46040,6 +45600,9 @@ var pixelsToBp = function (v) {
 };
 var ordMBp = Data_Ord.ordNumber;
 var ordBp = Data_Ord.ordNumber;
+var newtypeNegLog10 = new Data_Newtype.Newtype(function (n) {
+    return n;
+}, NegLog10);
 var newtypeMBp = new Data_Newtype.Newtype(function (n) {
     return n;
 }, MBp);
@@ -46055,7 +45618,7 @@ var validChrId = function (chr) {
     if (v instanceof Data_Maybe.Just) {
         return Data_Newtype.wrap(newtypeChrId)(v.value0);
     };
-    throw new Error("Failed pattern match at Genetics.Browser.Types line 95, column 6 - line 97, column 27: " + [ v.constructor.name ]);
+    throw new Error("Failed pattern match at Genetics.Browser.Types line 97, column 6 - line 99, column 27: " + [ v.constructor.name ]);
 };
 var newtypeBpPerPixel = new Data_Newtype.Newtype(function (n) {
     return n;
@@ -46088,6 +45651,8 @@ var eqChrId = new Data_Eq.Eq(function (chrA) {
         return v === v1;
     };
 });
+
+// TODO this might not even be what we want
 var ordChrId = new Data_Ord.Ord(function () {
     return eqChrId;
 }, function (chrA) {
@@ -46115,7 +45680,7 @@ var chrId = function (str) {
     if (v instanceof Data_Maybe.Just) {
         return Data_Newtype.wrap(newtypeChrId)(v.value0);
     };
-    throw new Error("Failed pattern match at Genetics.Browser.Types line 88, column 6 - line 90, column 28: " + [ v.constructor.name ]);
+    throw new Error("Failed pattern match at Genetics.Browser.Types line 90, column 6 - line 92, column 28: " + [ v.constructor.name ]);
 };
 var bpToPixels = function (v) {
     return function (v1) {
@@ -46137,12 +45702,23 @@ var toScreen = function (dictHCoordinate) {
         };
     };
 };
+var _NegLog10 = function (dictProfunctor) {
+    var to = function (p) {
+        return Data_Newtype.wrap(newtypeNegLog10)(-($$Math.log(p) / $$Math.ln10));
+    };
+    var from = function (v) {
+        return $$Math.pow(10.0)(-v);
+    };
+    return Data_Lens_Iso.iso(to)(from)(dictProfunctor);
+};
 var _MBp = function (dictProfunctor) {
     return Data_Lens_Iso_Newtype._Newtype(newtypeMBp)(newtypeMBp)(dictProfunctor);
 };
 var _ChrId = function (dictProfunctor) {
     return Data_Lens_Iso_Newtype._Newtype(newtypeChrId)(newtypeChrId)(dictProfunctor);
 };
+
+// probably not actually an isomorphism due to floating point inaccuracies
 var _BpMBp = function (dictProfunctor) {
     return Data_Lens_Iso.iso(mbp(hCoordBp))(bp(hCoordMBp))(dictProfunctor);
 };
@@ -46166,6 +45742,8 @@ module.exports = {
     BpPerPixel: BpPerPixel,
     bpToPixels: bpToPixels,
     pixelsToBp: pixelsToBp,
+    NegLog10: NegLog10,
+    _NegLog10: _NegLog10,
     newtypeBp: newtypeBp,
     eqBp: eqBp,
     ordBp: ordBp,
@@ -46196,10 +45774,11 @@ module.exports = {
     encodeChrId: encodeChrId,
     decodeChrId: decodeChrId,
     showChrId: showChrId,
-    newtypeBpPerPixel: newtypeBpPerPixel
+    newtypeBpPerPixel: newtypeBpPerPixel,
+    newtypeNegLog10: newtypeNegLog10
 };
 
-},{"../Control.Category":15,"../Data.CommutativeRing":142,"../Data.Eq":149,"../Data.EuclideanRing":151,"../Data.Field":153,"../Data.Foreign.Class":158,"../Data.Function":173,"../Data.Lens":224,"../Data.Lens.Iso":213,"../Data.Lens.Iso.Newtype":212,"../Data.Lens.Types":223,"../Data.Maybe":233,"../Data.Newtype":244,"../Data.Ord":253,"../Data.Ring":271,"../Data.Semigroup":275,"../Data.Semiring":277,"../Data.Show":280,"../Data.String":291,"../Prelude":340}],319:[function(require,module,exports){
+},{"../Control.Category":15,"../Data.CommutativeRing":142,"../Data.Eq":149,"../Data.EuclideanRing":151,"../Data.Field":153,"../Data.Foreign.Class":158,"../Data.Function":173,"../Data.Lens":224,"../Data.Lens.Iso":213,"../Data.Lens.Iso.Newtype":212,"../Data.Lens.Types":223,"../Data.Maybe":233,"../Data.Newtype":244,"../Data.Ord":253,"../Data.Ring":271,"../Data.Semigroup":275,"../Data.Semiring":277,"../Data.Show":280,"../Data.String":291,"../Math":328,"../Prelude":340}],319:[function(require,module,exports){
 /* globals exports, JSON */
 "use strict";
 
@@ -49010,7 +48589,7 @@ exports._ajax = function () {
 
 
 }).call(this,require('_process'))
-},{"_process":2}],332:[function(require,module,exports){
+},{"_process":1}],332:[function(require,module,exports){
 // Generated by purs version 0.11.7
 "use strict";
 var $foreign = require("./foreign");
@@ -51671,8 +51250,5 @@ module.exports = {
     unsafeCoerce: $foreign.unsafeCoerce
 };
 
-},{"./foreign":353}],355:[function(require,module,exports){
-module.exports = require("Genetics.Browser.Track.UI");
-
-},{"Genetics.Browser.Track.UI":316}]},{},[355])(355)
+},{"./foreign":353}]},{},[316])(316)
 });
