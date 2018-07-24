@@ -39600,6 +39600,35 @@ exports.scrollCanvasImpl = function(backCanvas, canvas, p) {
 };
 
 
+exports.zoomCanvasImpl = function(backCanvas, canvas, edges) {
+    var bCtx = backCanvas.getContext('2d');
+    bCtx.save();
+    bCtx.globalCompositeOperation = "copy";
+    bCtx.drawImage(canvas, 0, 0);
+    bCtx.restore();
+
+    var ctx = canvas.getContext('2d');
+
+    var width = canvas.width;
+    var height = canvas.height;
+
+    var sx = edges.left * width;
+    var sWidth = (edges.right - edges.left) * width
+
+    ctx.save();
+    ctx.globalCompositeOperation = "copy";
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.drawImage(backCanvas,
+                  sx, 0.0,
+                  sWidth, height,
+                  0.0, 0.0,
+                  width, height);
+    ctx.restore();
+};
+
+
+
+
 exports.frame = function(cb) {
     return function() {
         window.requestAnimationFrame(function(time) {
@@ -39652,22 +39681,6 @@ exports.canvasWheelCBImpl = function(canvas) {
 
             canvas.addEventListener("wheel", evCb);
         }
-    };
-};
-
-var cachedTextMeasures = {};
-
-exports.measureTextCached = function(ctx) {
-    return function(str) {
-        return function() {
-            if (cachedTextMeasures[str] !== undefined) {
-                return cachedTextMeasures[str];
-            } else {
-                var measure = ctx.measureText(str);
-                cachedTextMeasures[str] = measure;
-                return measure;
-            };
-        };
     };
 };
 
@@ -39727,12 +39740,11 @@ var Effect = require("../Effect/index.js");
 var Effect_Aff = require("../Effect.Aff/index.js");
 var Effect_Aff_Class = require("../Effect.Aff.Class/index.js");
 var Effect_Class = require("../Effect.Class/index.js");
-var Effect_Class_Console = require("../Effect.Class.Console/index.js");
 var Effect_Exception = require("../Effect.Exception/index.js");
 var Effect_Ref = require("../Effect.Ref/index.js");
 var Effect_Uncurried = require("../Effect.Uncurried/index.js");
 var Genetics_Browser_Layer = require("../Genetics.Browser.Layer/index.js");
-var Genetics_Browser_Util = require("../Genetics.Browser.Util/index.js");
+var Genetics_Browser_UI_View = require("../Genetics.Browser.UI.View/index.js");
 var Graphics_Canvas = require("../Graphics.Canvas/index.js");
 var Graphics_Drawing = require("../Graphics.Drawing/index.js");
 var Graphics_Drawing_Font = require("../Graphics.Drawing.Font/index.js");
@@ -39797,6 +39809,21 @@ var BrowserContainer = function (x) {
     return x;
 };
 
+// | "Zoom" a buffered canvas such that the left and right edges of the
+// | view (in canvas lengths) end up at the provided points.
+// | E.g. (Pair 0.0 1.0) doesn't do anything, (Pair 0.4 0.6) zooms in
+// | to the central 20% of the canvas.
+var zoomCanvas = function (v) {
+    return function (v1) {
+        return function () {
+            return $foreign.zoomCanvasImpl(v.back, v.front, {
+                left: v1.value0,
+                right: v1.value1
+            });
+        };
+    };
+};
+
 // | Takes a TrackContainer and a callback function that is called with each
 // | wheel scroll `deltaY`. Callback is provided with only the sign of `deltaY`
 // | as to be `deltaMode` agnostic.
@@ -39826,11 +39853,11 @@ var setElementStyle = Effect_Uncurried.runEffectFn3($foreign.setElementStyleImpl
 var setElementStyles = function (el) {
     return Data_Foldable.traverse_(Effect.applicativeEffect)(Data_Foldable.foldableArray)(Data_Tuple.uncurry(setElementStyle(el)));
 };
-var setCanvasStyles = function ($265) {
-    return setElementStyles($265);
+var setCanvasStyles = function ($274) {
+    return setElementStyles($274);
 };
-var setCanvasStyle = function ($266) {
-    return setElementStyle($266);
+var setCanvasStyle = function ($275) {
+    return setElementStyle($275);
 };
 var setCanvasZIndex = function (ce) {
     return function (i) {
@@ -39897,7 +39924,7 @@ var labelBox = function (v) {
                     if (v1.gravity instanceof LRight) {
                         return v1.point.x + pad;
                     };
-                    throw new Error("Failed pattern match at Genetics.Browser.Canvas line 622, column 11 - line 625, column 33: " + [ v1.gravity.constructor.name ]);
+                    throw new Error("Failed pattern match at Genetics.Browser.Canvas line 647, column 11 - line 650, column 33: " + [ v1.gravity.constructor.name ]);
                 })();
                 var height = Data_Int.toNumber(labelFontSize);
                 return {
@@ -39933,7 +39960,7 @@ var getTrack = function (n) {
             if (v2 instanceof Data_Maybe.Nothing) {
                 return Control_Monad_Error_Class.throwError(Effect_Aff.monadThrowAff)(Effect_Exception.error("Could not find track '" + (n + "'!")));
             };
-            throw new Error("Failed pattern match at Genetics.Browser.Canvas line 390, column 3 - line 396, column 1: " + [ v2.constructor.name ]);
+            throw new Error("Failed pattern match at Genetics.Browser.Canvas line 415, column 3 - line 421, column 1: " + [ v2.constructor.name ]);
         });
     };
 };
@@ -39947,10 +39974,10 @@ var getDimensions = function (dictMonadEffect) {
         return Effect_Class.liftEffect(dictMonadEffect)(Effect_Ref.read(v.dimensions));
     };
 };
-var getBufferedContext = Data_Functor.map(Data_Functor.functorFn)(Graphics_Canvas.getContext2D)(function ($267) {
+var getBufferedContext = Data_Functor.map(Data_Functor.functorFn)(Graphics_Canvas.getContext2D)(function ($276) {
     return (function (v) {
         return v.front;
-    })(Data_Newtype.unwrap(newtypeBufferedCanvas)($267));
+    })(Data_Newtype.unwrap(newtypeBufferedCanvas)($276));
 });
 var eqLabelPlace = new Data_Eq.Eq(function (x) {
     return function (y) {
@@ -40058,7 +40085,7 @@ var canvasDrag = function (el) {
                         y: 0
                     })(Data_Nullable.toMaybe(v.total))));
                 };
-                throw new Error("Failed pattern match at Genetics.Browser.Canvas line 254, column 36 - line 256, column 73: " + [ v1.constructor.name ]);
+                throw new Error("Failed pattern match at Genetics.Browser.Canvas line 286, column 36 - line 288, column 73: " + [ v1.constructor.name ]);
             };
         };
         return $foreign.canvasDragImpl(el)(toEither(f));
@@ -40066,22 +40093,33 @@ var canvasDrag = function (el) {
 };
 
 // | Takes a BrowserContainer and a callback function that is called
-// | with the total dragged distance, on each track, when a click &
-// | drag action is completed.
+// | with the dragged distance each frame, on each track, when a click &
+// | drag action is under way.
 var dragScroll = function (v) {
     return function (cb) {
         return function __do() {
             var v1 = Effect_Ref.read(v.tracks)();
             return canvasDrag(v.element)(function (v2) {
                 if (v2 instanceof Data_Either.Left) {
-                    return cb(v2.value0);
-                };
-                if (v2 instanceof Data_Either.Right) {
                     return Control_Applicative.pure(Effect.applicativeEffect)(Data_Unit.unit);
                 };
-                throw new Error("Failed pattern match at Genetics.Browser.Canvas line 269, column 40 - line 271, column 25: " + [ v2.constructor.name ]);
+                if (v2 instanceof Data_Either.Right) {
+                    return cb(v2.value0);
+                };
+                throw new Error("Failed pattern match at Genetics.Browser.Canvas line 301, column 40 - line 303, column 20: " + [ v2.constructor.name ]);
             })();
         };
+    };
+};
+var browserContainer = function (dictMonadEffect) {
+    return function (element) {
+        return Effect_Class.liftEffect(dictMonadEffect)(function __do() {
+            var v = Effect_Ref["new"](Data_Monoid.mempty(Data_Map_Internal.monoidMap(Data_Ord.ordString)))();
+            return {
+                tracks: v,
+                element: element
+            };
+        });
     };
 };
 var blankBuffer = function (v) {
@@ -40128,7 +40166,7 @@ var resizeLayer = function (dictMonadEffect) {
                 if (lc instanceof Buffer) {
                     return setBufferedCanvasSize(dims)(lc.value0);
                 };
-                throw new Error("Failed pattern match at Genetics.Browser.Canvas line 522, column 3 - line 524, column 45: " + [ lc.constructor.name ]);
+                throw new Error("Failed pattern match at Genetics.Browser.Canvas line 547, column 3 - line 549, column 45: " + [ lc.constructor.name ]);
             })());
         };
     };
@@ -40202,6 +40240,23 @@ var renderLabels = function (v) {
         };
     };
 };
+var animateCanvas = function (bc) {
+    return function (v) {
+        if (v instanceof Genetics_Browser_UI_View.Scrolling) {
+            return scrollCanvas(bc)({
+                x: -v.value0,
+                y: 0
+            });
+        };
+        if (v instanceof Genetics_Browser_UI_View.Zooming) {
+            return zoomCanvas(bc)(v.value0);
+        };
+        if (v instanceof Genetics_Browser_UI_View.Jump) {
+            return Control_Applicative.pure(Effect.applicativeEffect)(Data_Unit.unit);
+        };
+        throw new Error("Failed pattern match at Genetics.Browser.Canvas line 252, column 20 - line 255, column 32: " + [ v.constructor.name ]);
+    };
+};
 var addTrack = function (dictMonadEffect) {
     return function (v) {
         return function (name) {
@@ -40226,14 +40281,14 @@ var _Static = function (dictChoice) {
         if (v instanceof Buffer) {
             return Data_Maybe.Nothing.value;
         };
-        throw new Error("Failed pattern match at Genetics.Browser.Canvas line 697, column 27 - line 699, column 23: " + [ v.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.Canvas line 722, column 27 - line 724, column 23: " + [ v.constructor.name ]);
     })(dictChoice);
 };
 var _Layers = function (dictStrong) {
-    return function ($268) {
+    return function ($277) {
         return Data_Lens_Iso_Newtype._Newtype(newtypeTrackContainer)(newtypeTrackContainer)(dictStrong.Profunctor0())(Data_Lens_Record.prop(new Data_Symbol.IsSymbol(function () {
             return "layers";
-        }))()()(Data_Symbol.SProxy.value)(dictStrong)($268));
+        }))()()(Data_Symbol.SProxy.value)(dictStrong)($277));
     };
 };
 var _FrontCanvas = Data_Lens_Getter.to(function (v) {
@@ -40243,7 +40298,7 @@ var _FrontCanvas = Data_Lens_Getter.to(function (v) {
     if (v instanceof Buffer) {
         return (Data_Newtype.unwrap(newtypeBufferedCanvas)(v.value0)).front;
     };
-    throw new Error("Failed pattern match at Genetics.Browser.Canvas line 687, column 19 - line 689, column 31: " + [ v.constructor.name ]);
+    throw new Error("Failed pattern match at Genetics.Browser.Canvas line 712, column 19 - line 714, column 31: " + [ v.constructor.name ]);
 });
 
 // | Provided a TrackContainer, we can initialize and add a named layer.
@@ -40268,7 +40323,7 @@ var createAndAddLayer = function (dictMonadAff) {
                             if (v.value0 instanceof Genetics_Browser_Layer.Scrolling) {
                                 return Data_Functor.map(Effect.functorEffect)(Buffer.create)(createBufferedCanvas(v1)(name))();
                             };
-                            throw new Error("Failed pattern match at Genetics.Browser.Canvas line 749, column 11 - line 751, column 61: " + [ v.value0.constructor.name ]);
+                            throw new Error("Failed pattern match at Genetics.Browser.Canvas line 774, column 11 - line 776, column 61: " + [ v.value0.constructor.name ]);
                         })();
                         setCanvasPosition(pos)(Data_Lens_Getter.viewOn(v2)(_FrontCanvas))();
                         return v2;
@@ -40329,7 +40384,7 @@ var createAndAddLayer = function (dictMonadAff) {
                                                     if (v6 instanceof Data_Maybe.Just) {
                                                         return Control_Applicative.pure(((dictMonadAff.MonadEffect0()).Monad0()).Applicative0())(Data_Lens_Getter.viewOn(v6.value0)(_FrontCanvas));
                                                     };
-                                                    throw new Error("Failed pattern match at Genetics.Browser.Canvas line 785, column 16 - line 787, column 53: " + [ v6.constructor.name ]);
+                                                    throw new Error("Failed pattern match at Genetics.Browser.Canvas line 810, column 16 - line 812, column 53: " + [ v6.constructor.name ]);
                                                 })())(function (v6) {
                                                     return Control_Bind.bind(((dictMonadAff.MonadEffect0()).Monad0()).Bind1())(getDimensions(dictMonadAff.MonadEffect0())(bc))(function (v7) {
                                                         return Control_Bind.bind(((dictMonadAff.MonadEffect0()).Monad0()).Bind1())(Genetics_Browser_Layer.slotContext(dictMonadAff.MonadEffect0())(v)(v7)(v6))(function (v8) {
@@ -40362,8 +40417,8 @@ var createAndAddLayer = function (dictMonadAff) {
                                                                         return Effect_Class.liftEffect(dictMonadAff.MonadEffect0())(Control_Applicative.when(Effect.applicativeEffect)(d.topLeft.x <= v4.value1 && d.bottomRight.x >= v4.value0)(Graphics_Drawing.render(v8)(Graphics_Drawing.translate(d.topLeft.x)(d.topLeft.y)(d.drawing(Data_Unit.unit)))));
                                                                     };
                                                                     var chunkF = function (l1) {
-                                                                        var $227 = Data_List["null"](l1);
-                                                                        if ($227) {
+                                                                        var $238 = Data_List["null"](l1);
+                                                                        if ($238) {
                                                                             return Data_Maybe.Nothing.value;
                                                                         };
                                                                         return new Data_Maybe.Just(new Data_Tuple.Tuple(Data_List.take(250)(l1), Data_List.drop(250)(l1)));
@@ -40440,8 +40495,8 @@ var zIndexLayers = function (dictMonadEffect) {
                 var v1 = Effect_Ref.read(v.layers)();
                 var layerNames = Data_Map.keys(v1);
                 var n = Data_Foldable.length(Data_Set.foldableSet)(Data_Semiring.semiringInt)(layerNames);
-                var $245 = Data_List["null"](Data_List.difference(Data_Eq.eqString)(order)(Data_List.fromFoldable(Data_Set.foldableSet)(layerNames)));
-                if ($245) {
+                var $256 = Data_List["null"](Data_List.difference(Data_Eq.eqString)(order)(Data_List.fromFoldable(Data_Set.foldableSet)(layerNames)));
+                if ($256) {
                     return Data_Functor["void"](Effect.functorEffect)(Data_TraversableWithIndex.forWithIndex(Effect.applicativeEffect)(Data_List_Types.traversableWithIndexList)(order)(function (i) {
                         return function (ln) {
                             return Data_Foldable.traverse_(Effect.applicativeEffect)(Data_Foldable.foldableMaybe)(function (l) {
@@ -40457,10 +40512,10 @@ var zIndexLayers = function (dictMonadEffect) {
 };
 var _Container = function (dictNewtype) {
     return function (dictStrong) {
-        return function ($269) {
+        return function ($278) {
             return Data_Lens_Iso_Newtype._Newtype(dictNewtype)(dictNewtype)(dictStrong.Profunctor0())(Data_Lens_Record.prop(new Data_Symbol.IsSymbol(function () {
                 return "element";
-            }))()()(Data_Symbol.SProxy.value)(dictStrong)($269));
+            }))()()(Data_Symbol.SProxy.value)(dictStrong)($278));
         };
     };
 };
@@ -40486,7 +40541,7 @@ var addLayer = function (dictMonadEffect) {
                         if (v1 instanceof Data_Maybe.Nothing) {
                             return Web_DOM_Node.appendChild(toNode(lc))(Data_Lens_Getter.viewOn(bc)(_Container(newtypeTrackContainer)(Data_Lens_Internal_Forget.strongForget)));
                         };
-                        throw new Error("Failed pattern match at Genetics.Browser.Canvas line 541, column 10 - line 543, column 95: " + [ v1.constructor.name ]);
+                        throw new Error("Failed pattern match at Genetics.Browser.Canvas line 566, column 10 - line 568, column 95: " + [ v1.constructor.name ]);
                     })())();
                 });
             };
@@ -40512,7 +40567,7 @@ var deleteLayer = function (dictMonadEffect) {
                     if (v1 instanceof Data_Maybe.Just) {
                         return Data_Functor["void"](Effect.functorEffect)(Web_DOM_Node.removeChild(toNode(v1.value0))(Data_Lens_Getter.viewOn(bc)(_Container(newtypeTrackContainer)(Data_Lens_Internal_Forget.strongForget))))();
                     };
-                    throw new Error("Failed pattern match at Genetics.Browser.Canvas line 556, column 3 - line 558, column 83: " + [ v1.constructor.name ]);
+                    throw new Error("Failed pattern match at Genetics.Browser.Canvas line 581, column 3 - line 583, column 83: " + [ v1.constructor.name ]);
                 })();
                 return Effect_Ref.modify_(Data_Map_Internal["delete"](Data_Ord.ordString)(name))(Data_Lens_Getter.viewOn(bc)(_Layers(Data_Lens_Internal_Forget.strongForget)))();
             });
@@ -40536,8 +40591,8 @@ var trackClickHandler = function (dictMonadEffect) {
                     }))()(Data_Ring.ringRecordNil)(Data_Ring.ringNumber))(Data_Ring.ringNumber)))(p)(Genetics_Browser_Layer.slotOffset(v)(Genetics_Browser_Layer.asSlot(com)));
                 };
                 var cb = Data_Lens_Getter.viewOn(com)(Genetics_Browser_Layer._Component);
-                return elementClick(Data_Lens_Getter.viewOn(bc)(_Container(newtypeTrackContainer)(Data_Lens_Internal_Forget.strongForget)))(function ($270) {
-                    return cb(translate($270));
+                return elementClick(Data_Lens_Getter.viewOn(bc)(_Container(newtypeTrackContainer)(Data_Lens_Internal_Forget.strongForget)))(function ($279) {
+                    return cb(translate($279));
                 })();
             });
         };
@@ -40565,9 +40620,20 @@ var _Buffer = function (dictChoice) {
         if (v instanceof Buffer) {
             return new Data_Maybe.Just(v.value0);
         };
-        throw new Error("Failed pattern match at Genetics.Browser.Canvas line 693, column 9 - line 693, column 34: " + [ v.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.Canvas line 718, column 9 - line 718, column 34: " + [ v.constructor.name ]);
     };
     return Data_Lens_Prism["prism'"](Buffer.create)(from)(dictChoice);
+};
+var animateTrack = function (v) {
+    return function (a) {
+        return function __do() {
+            var v1 = Effect_Ref.read(v.layers)();
+            var toAnimate = Data_Filterable.filterMap(Data_Filterable.filterableMap(Data_Ord.ordString))(Data_Lens_Fold.preview(_Buffer(Data_Lens_Internal_Forget.choiceForget(Data_Maybe_First.monoidFirst))))(v1);
+            return Data_Foldable.for_(Effect.applicativeEffect)(Data_Map_Internal.foldableMap)(toAnimate)(function (bc$prime) {
+                return animateCanvas(bc$prime)(a);
+            })();
+        };
+    };
 };
 
 // | Scroll all buffered canvases in a container
@@ -40580,34 +40646,6 @@ var scrollTrack = function (v) {
                 return scrollCanvas(bc$prime)(pt);
             })();
         };
-    };
-};
-var browserContainer = function (dictMonadEffect) {
-    return function (element) {
-        return Effect_Class.liftEffect(dictMonadEffect)(function __do() {
-            var v = Effect_Ref["new"](Data_Monoid.mempty(Data_Map_Internal.monoidMap(Data_Ord.ordString)))();
-            canvasDrag(element)(function (v1) {
-                if (v1 instanceof Data_Either.Left) {
-                    return Control_Applicative.pure(Effect.applicativeEffect)(Data_Unit.unit);
-                };
-                if (v1 instanceof Data_Either.Right) {
-                    return function __do() {
-                        var v2 = Effect_Ref.read(v)();
-                        return Data_Foldable.for_(Effect.applicativeEffect)(Data_Map_Internal.foldableMap)(v2)(function (c) {
-                            return scrollTrack(c)({
-                                x: -v1.value0.x,
-                                y: 0.0
-                            });
-                        })();
-                    };
-                };
-                throw new Error("Failed pattern match at Genetics.Browser.Canvas line 376, column 37 - line 380, column 52: " + [ v1.constructor.name ]);
-            })();
-            return {
-                tracks: v,
-                element: element
-            };
-        });
     };
 };
 module.exports = {
@@ -40633,11 +40671,12 @@ module.exports = {
     browserContainer: browserContainer,
     addTrack: addTrack,
     getTrack: getTrack,
+    animateTrack: animateTrack,
     newtypeBrowserContainer: newtypeBrowserContainer,
     eqLabelPlace: eqLabelPlace
 };
 
-},{"../Control.Applicative/index.js":9,"../Control.Bind/index.js":15,"../Control.Monad.Error.Class/index.js":23,"../Control.Semigroupoid/index.js":51,"../Data.Array/index.js":63,"../Data.Either/index.js":91,"../Data.Eq/index.js":95,"../Data.EuclideanRing/index.js":97,"../Data.Filterable/index.js":99,"../Data.Foldable/index.js":101,"../Data.Function/index.js":106,"../Data.Functor/index.js":112,"../Data.HeytingAlgebra/index.js":119,"../Data.Int/index.js":124,"../Data.Lens.Fold/index.js":130,"../Data.Lens.Getter/index.js":131,"../Data.Lens.Internal.Forget/index.js":136,"../Data.Lens.Iso.Newtype/index.js":145,"../Data.Lens.Prism/index.js":152,"../Data.Lens.Record/index.js":153,"../Data.Lens/index.js":157,"../Data.List.Types/index.js":161,"../Data.List/index.js":162,"../Data.Map.Internal/index.js":163,"../Data.Map/index.js":164,"../Data.Maybe.First/index.js":165,"../Data.Maybe/index.js":167,"../Data.Monoid/index.js":176,"../Data.Newtype/index.js":178,"../Data.Nullable/index.js":181,"../Data.Ord/index.js":189,"../Data.Pair/index.js":191,"../Data.Ring/index.js":201,"../Data.Semigroup/index.js":207,"../Data.Semiring/index.js":209,"../Data.Set/index.js":210,"../Data.Show/index.js":212,"../Data.Symbol/index.js":231,"../Data.Time.Duration/index.js":233,"../Data.Traversable/index.js":238,"../Data.TraversableWithIndex/index.js":239,"../Data.Tuple/index.js":240,"../Data.Unfoldable/index.js":242,"../Data.Unit/index.js":246,"../Data.Variant.Internal/index.js":248,"../Data.Variant/index.js":249,"../Effect.Aff.Class/index.js":254,"../Effect.Aff/index.js":257,"../Effect.Class.Console/index.js":258,"../Effect.Class/index.js":259,"../Effect.Exception/index.js":264,"../Effect.Ref/index.js":268,"../Effect.Uncurried/index.js":270,"../Effect/index.js":274,"../Genetics.Browser.Layer/index.js":295,"../Genetics.Browser.Util/index.js":301,"../Graphics.Canvas/index.js":308,"../Graphics.Drawing.Font/index.js":309,"../Graphics.Drawing/index.js":310,"../Partial.Unsafe/index.js":321,"../Prelude/index.js":324,"../Record/index.js":333,"../Type.Equality/index.js":344,"../Unsafe.Coerce/index.js":349,"../Web.DOM.Element/index.js":363,"../Web.DOM.Node/index.js":368,"../Web.DOM/index.js":382,"./foreign.js":290}],292:[function(require,module,exports){
+},{"../Control.Applicative/index.js":9,"../Control.Bind/index.js":15,"../Control.Monad.Error.Class/index.js":23,"../Control.Semigroupoid/index.js":51,"../Data.Array/index.js":63,"../Data.Either/index.js":91,"../Data.Eq/index.js":95,"../Data.EuclideanRing/index.js":97,"../Data.Filterable/index.js":99,"../Data.Foldable/index.js":101,"../Data.Function/index.js":106,"../Data.Functor/index.js":112,"../Data.HeytingAlgebra/index.js":119,"../Data.Int/index.js":124,"../Data.Lens.Fold/index.js":130,"../Data.Lens.Getter/index.js":131,"../Data.Lens.Internal.Forget/index.js":136,"../Data.Lens.Iso.Newtype/index.js":145,"../Data.Lens.Prism/index.js":152,"../Data.Lens.Record/index.js":153,"../Data.Lens/index.js":157,"../Data.List.Types/index.js":161,"../Data.List/index.js":162,"../Data.Map.Internal/index.js":163,"../Data.Map/index.js":164,"../Data.Maybe.First/index.js":165,"../Data.Maybe/index.js":167,"../Data.Monoid/index.js":176,"../Data.Newtype/index.js":178,"../Data.Nullable/index.js":181,"../Data.Ord/index.js":189,"../Data.Pair/index.js":191,"../Data.Ring/index.js":201,"../Data.Semigroup/index.js":207,"../Data.Semiring/index.js":209,"../Data.Set/index.js":210,"../Data.Show/index.js":212,"../Data.Symbol/index.js":231,"../Data.Time.Duration/index.js":233,"../Data.Traversable/index.js":238,"../Data.TraversableWithIndex/index.js":239,"../Data.Tuple/index.js":240,"../Data.Unfoldable/index.js":242,"../Data.Unit/index.js":246,"../Data.Variant.Internal/index.js":248,"../Data.Variant/index.js":249,"../Effect.Aff.Class/index.js":254,"../Effect.Aff/index.js":257,"../Effect.Class/index.js":259,"../Effect.Exception/index.js":264,"../Effect.Ref/index.js":268,"../Effect.Uncurried/index.js":270,"../Effect/index.js":274,"../Genetics.Browser.Layer/index.js":295,"../Genetics.Browser.UI.View/index.js":299,"../Graphics.Canvas/index.js":308,"../Graphics.Drawing.Font/index.js":309,"../Graphics.Drawing/index.js":310,"../Partial.Unsafe/index.js":321,"../Prelude/index.js":324,"../Record/index.js":333,"../Type.Equality/index.js":344,"../Unsafe.Coerce/index.js":349,"../Web.DOM.Element/index.js":363,"../Web.DOM.Node/index.js":368,"../Web.DOM/index.js":382,"./foreign.js":290}],292:[function(require,module,exports){
 "use strict";
 var Control_Category = require("../Control.Category/index.js");
 var Control_Semigroupoid = require("../Control.Semigroupoid/index.js");
@@ -41035,6 +41074,7 @@ module.exports = {
 };
 
 },{"../Control.Category/index.js":16,"../Control.Semigroupoid/index.js":51,"../Data.Array/index.js":63,"../Data.BigInt/index.js":73,"../Data.Boolean/index.js":75,"../Data.Eq/index.js":95,"../Data.EuclideanRing/index.js":97,"../Data.Foldable/index.js":101,"../Data.Function/index.js":106,"../Data.Functor/index.js":112,"../Data.Generic.Rep/index.js":116,"../Data.HeytingAlgebra/index.js":119,"../Data.Lens.Fold/index.js":130,"../Data.Lens.Getter/index.js":131,"../Data.Lens.Internal.Forget/index.js":136,"../Data.Lens.Iso.Newtype/index.js":145,"../Data.Lens.Lens.Tuple/index.js":147,"../Data.Lens/index.js":157,"../Data.Map.Internal/index.js":163,"../Data.Map/index.js":164,"../Data.Maybe/index.js":167,"../Data.Monoid.Additive/index.js":170,"../Data.Monoid.Endo/index.js":174,"../Data.Newtype/index.js":178,"../Data.Ord/index.js":189,"../Data.Pair/index.js":191,"../Data.Ring/index.js":201,"../Data.Semiring/index.js":209,"../Data.Traversable/index.js":238,"../Data.Tuple/index.js":240,"../Data.Unfoldable/index.js":242,"../Genetics.Browser.Types/index.js":297,"../Global.Unsafe/index.js":304,"../Partial.Unsafe/index.js":321,"../Prelude/index.js":324}],293:[function(require,module,exports){
+// Generated by purs version 0.12.0
 "use strict";
 var Color = require("../Color/index.js");
 var Color_Scheme_Clrs = require("../Color.Scheme.Clrs/index.js");
@@ -41115,8 +41155,6 @@ var Unsafe_Coerce = require("../Unsafe.Coerce/index.js");
 var snpsUI = function (vscale) {
     return Genetics_Browser.renderFixedUI(Genetics_Browser_Layer.CLeft.create(Genetics_Browser.drawVScaleInSlot(vscale)));
 };
-
-// | A completely dumb default way of rendering arbitrary annotation fields
 var showAnnotationField = function (fv) {
     return fv.field + (": " + fv.value);
 };
@@ -41463,15 +41501,9 @@ var renderAnnotationPeaks = function (cSys) {
             return function (annoPks) {
                 return function (cdim) {
                     var tailPixels = 6.0e-2 * cdim.height;
-                    
-                    // part of the canvas that a given peak will cover when rendered
-var drawingCovers = function (aPeak) {
-                        
-                        // hardcoded glyph width in pixels
-var gH = 11.0 - 6.5;
-                        
-                        // hardcoded height
-var h = tailPixels + gH * Data_Foldable.length(Data_Foldable.foldableArray)(Data_Semiring.semiringNumber)(aPeak.elements);
+                    var drawingCovers = function (aPeak) {
+                        var gH = 11.0 - 6.5;
+                        var h = tailPixels + gH * Data_Foldable.length(Data_Foldable.foldableArray)(Data_Semiring.semiringNumber)(aPeak.elements);
                         var y = aPeak.y - h;
                         return {
                             x: aPeak.covers.value0,
@@ -41500,10 +41532,7 @@ var h = tailPixels + gH * Data_Foldable.length(Data_Foldable.foldableArray)(Data
                                 return Graphics_Drawing.translate(0.0)(-6.5)(Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)((annotationLegendEntry(conf)(a)).icon)(d));
                             };
                         })(Data_Monoid.mempty(Graphics_Drawing.monoidDrawing))(aPeak.elements));
-                        
-                        // hardcoded font size because this will be handled by UI.Canvas later
-var fontHeight = 14.0;
-                        var labelsHeight = Data_Foldable.length(Data_Foldable.foldableArray)(Data_Semiring.semiringNumber)(aPeak.elements) * fontHeight;
+                        var labelsHeight = Data_Foldable.length(Data_Foldable.foldableArray)(Data_Semiring.semiringNumber)(aPeak.elements) * 14.0;
                         var drawing = {
                             drawing: Data_Semigroup.append(Graphics_Drawing.semigroupDrawing)(tail)(icons),
                             points: [ {
@@ -41612,8 +41641,6 @@ var annotationFields = function (dictKeys) {
         }))(Record_Extra.nilKeys))))))(Data_Unit.unit);
     };
 };
-
-// | Partially parse the parts of the annotation record that are *not* in the Annotation type
 var parseAnnotationRest = function (a) {
     return Control_Bind.bind(Control_Monad_Except_Trans.bindExceptT(Data_Identity.monadIdentity))(Data_Functor.map(Control_Monad_Except_Trans.functorExceptT(Data_Identity.functorIdentity))(Data_List.fromFoldable(Data_Foldable.foldableArray))(Foreign_Keys.keys(a)))(function (v) {
         var restFields = Data_List.difference(Data_Eq.eqString)(v)(annotationFields(Record_Extra.consKeys(new Data_Symbol.IsSymbol(function () {
@@ -41899,7 +41926,6 @@ exports.setContextTranslation = function(p) {
 };
 
 },{}],295:[function(require,module,exports){
-// Generated by purs version 0.12.0
 "use strict";
 var $foreign = require("./foreign.js");
 var Control_Applicative = require("../Control.Applicative/index.js");
@@ -42336,6 +42362,10 @@ var trackSlots = function (sp) {
         }))(_left)(Data_Unit.unit))
     };
 };
+
+// | Provided a component slot (contents irrelevant), and the
+// | dimensions & padding of the track, `slotContext` provides a
+// | canvas context that has been translated to the relevant slot
 var slotContext = function (dictMonadEffect) {
     return function (v) {
         return function (dims) {
@@ -42891,6 +42921,196 @@ module.exports = {
 },{"../Control.Category/index.js":16,"../Data.CommutativeRing/index.js":79,"../Data.DivisionRing/index.js":90,"../Data.Eq/index.js":95,"../Data.EuclideanRing/index.js":97,"../Data.Field/index.js":98,"../Data.Function/index.js":106,"../Data.Lens.Getter/index.js":131,"../Data.Lens.Iso.Newtype/index.js":145,"../Data.Lens.Iso/index.js":146,"../Data.Lens.Types/index.js":156,"../Data.Lens/index.js":157,"../Data.Maybe/index.js":167,"../Data.Newtype/index.js":178,"../Data.Number.Format/index.js":183,"../Data.Ord/index.js":189,"../Data.Ring/index.js":201,"../Data.Semigroup/index.js":207,"../Data.Semiring/index.js":209,"../Data.Show/index.js":212,"../Data.String.CodeUnits/index.js":216,"../Data.String.Common/index.js":218,"../Data.String.Pattern/index.js":223,"../Data.String/index.js":229,"../Foreign.Class/index.js":275,"../Math/index.js":312,"../Prelude/index.js":324}],298:[function(require,module,exports){
 "use strict";
 
+
+exports.onTimeout = function(delay) {
+    return function(cb) {
+        return function() {
+            var timeoutRef = null;
+
+            var throttled = function() {
+                if (timeoutRef) {
+                    clearTimeout(timeoutRef);
+                }
+
+                timeoutRef = setTimeout(function() {
+                    timeoutRef = null;
+                    cb();
+                }, delay);
+            };
+
+            return { run: throttled,
+                     cancel: function() { clearTimeout(timeoutRef) } };
+        };
+    };
+};
+
+},{}],299:[function(require,module,exports){
+"use strict";
+var $foreign = require("./foreign.js");
+var Control_Applicative = require("../Control.Applicative/index.js");
+var Control_Bind = require("../Control.Bind/index.js");
+var Control_Category = require("../Control.Category/index.js");
+var Data_BigInt = require("../Data.BigInt/index.js");
+var Data_Either = require("../Data.Either/index.js");
+var Data_Function = require("../Data.Function/index.js");
+var Data_Monoid = require("../Data.Monoid/index.js");
+var Data_Newtype = require("../Data.Newtype/index.js");
+var Data_Pair = require("../Data.Pair/index.js");
+var Data_Semigroup = require("../Data.Semigroup/index.js");
+var Data_Semiring = require("../Data.Semiring/index.js");
+var Data_Show = require("../Data.Show/index.js");
+var Effect = require("../Effect/index.js");
+var Effect_Aff = require("../Effect.Aff/index.js");
+var Effect_Ref = require("../Effect.Ref/index.js");
+var Genetics_Browser_Coordinates = require("../Genetics.Browser.Coordinates/index.js");
+var Prelude = require("../Prelude/index.js");
+var ScrollView = (function () {
+    function ScrollView(value0) {
+        this.value0 = value0;
+    };
+    ScrollView.create = function (value0) {
+        return new ScrollView(value0);
+    };
+    return ScrollView;
+})();
+var ZoomView = (function () {
+    function ZoomView(value0) {
+        this.value0 = value0;
+    };
+    ZoomView.create = function (value0) {
+        return new ZoomView(value0);
+    };
+    return ZoomView;
+})();
+var ModView = (function () {
+    function ModView(value0) {
+        this.value0 = value0;
+    };
+    ModView.create = function (value0) {
+        return new ModView(value0);
+    };
+    return ModView;
+})();
+var Scrolling = (function () {
+    function Scrolling(value0) {
+        this.value0 = value0;
+    };
+    Scrolling.create = function (value0) {
+        return new Scrolling(value0);
+    };
+    return Scrolling;
+})();
+var Zooming = (function () {
+    function Zooming(value0) {
+        this.value0 = value0;
+    };
+    Zooming.create = function (value0) {
+        return new Zooming(value0);
+    };
+    return Zooming;
+})();
+var Jump = (function () {
+    function Jump() {
+
+    };
+    Jump.value = new Jump();
+    return Jump;
+})();
+var updateViewFold = function (uv) {
+    return Data_Newtype.over(Genetics_Browser_Coordinates.coordsysviewNewtype)(Genetics_Browser_Coordinates.coordsysviewNewtype)(Genetics_Browser_Coordinates.CoordSysView)((function () {
+        if (uv instanceof ZoomView) {
+            return function (v) {
+                return Genetics_Browser_Coordinates.scalePairBy(v)(uv.value0);
+            };
+        };
+        if (uv instanceof ScrollView) {
+            return function (v) {
+                return Genetics_Browser_Coordinates.translatePairBy(v)(uv.value0);
+            };
+        };
+        if (uv instanceof ModView) {
+            return uv.value0;
+        };
+        throw new Error("Failed pattern match at Genetics.Browser.UI.View line 46, column 39 - line 49, column 20: " + [ uv.constructor.name ]);
+    })());
+};
+var showUpdateView = new Data_Show.Show(function (v) {
+    if (v instanceof ScrollView) {
+        return "(Scroll by " + (Data_Show.show(Data_Show.showNumber)(v.value0) + ")");
+    };
+    if (v instanceof ZoomView) {
+        return "(Zoom by " + (Data_Show.show(Data_Show.showNumber)(v.value0) + ")");
+    };
+    return "(ModView)";
+});
+
+// TODO idk if this instance makes sense??? whatevs
+var semigroupUpdateView = new Data_Semigroup.Semigroup(function (v) {
+    return function (v1) {
+        if (v instanceof ScrollView && v1 instanceof ScrollView) {
+            return new ScrollView(v.value0 + v1.value0);
+        };
+        if (v instanceof ZoomView && v1 instanceof ZoomView) {
+            return new ZoomView(v.value0 * v1.value0);
+        };
+        return v1;
+    };
+});
+var monoidUpdateView = new Data_Monoid.Monoid(function () {
+    return semigroupUpdateView;
+}, new ModView(Control_Category.identity(Control_Category.categoryFn)));
+var animateDelta = function (dictMonoid) {
+    return function (update) {
+        return function (cb) {
+            return function (initial) {
+                return function (timeout) {
+                    return function __do() {
+                        var v = Effect_Ref["new"](initial.position)();
+                        var v1 = Effect_Ref["new"](initial.velocity)();
+                        var v2 = $foreign.onTimeout(timeout.done)(function __do() {
+                            var v2 = Effect_Ref.read(v)();
+                            return cb(new Data_Either.Left(v2))();
+                        })();
+                        var v3 = $foreign.onTimeout(timeout.step)(function __do() {
+                            var v3 = Effect_Ref.read(v1)();
+                            Effect_Ref.write(Data_Monoid.mempty(dictMonoid))(v1)();
+                            var v4 = Effect_Ref.read(v)();
+                            Effect_Ref.write(update.step(v3)(v4))(v)();
+                            cb(Data_Either.Right.create(update.animate(v3)(v4)))();
+                            return v2.run();
+                        })();
+                        return function (cmd) {
+                            return function __do() {
+                                Effect_Ref.modify_(function (v4) {
+                                    return Data_Semigroup.append(dictMonoid.Semigroup0())(v4)(cmd);
+                                })(v1)();
+                                return v3.run();
+                            };
+                        };
+                    };
+                };
+            };
+        };
+    };
+};
+module.exports = {
+    ScrollView: ScrollView,
+    ZoomView: ZoomView,
+    ModView: ModView,
+    updateViewFold: updateViewFold,
+    Scrolling: Scrolling,
+    Zooming: Zooming,
+    Jump: Jump,
+    animateDelta: animateDelta,
+    showUpdateView: showUpdateView,
+    semigroupUpdateView: semigroupUpdateView,
+    monoidUpdateView: monoidUpdateView,
+    onTimeout: $foreign.onTimeout
+};
+
+},{"../Control.Applicative/index.js":9,"../Control.Bind/index.js":15,"../Control.Category/index.js":16,"../Data.BigInt/index.js":73,"../Data.Either/index.js":91,"../Data.Function/index.js":106,"../Data.Monoid/index.js":176,"../Data.Newtype/index.js":178,"../Data.Pair/index.js":191,"../Data.Semigroup/index.js":207,"../Data.Semiring/index.js":209,"../Data.Show/index.js":212,"../Effect.Aff/index.js":257,"../Effect.Ref/index.js":268,"../Effect/index.js":274,"../Genetics.Browser.Coordinates/index.js":292,"../Prelude/index.js":324,"./foreign.js":298}],300:[function(require,module,exports){
+"use strict";
+
 exports.buttonEvent = function(id) {
   return function(cb) {
     return function() {
@@ -42931,29 +43151,6 @@ exports.resizeEvent = function(cb) {
         };
 
         window.addEventListener('resize', throttled, false);
-    };
-};
-
-
-exports.onTimeout = function(delay) {
-    return function(cb) {
-        return function() {
-            var timeoutRef = null;
-
-            var throttled = function() {
-                if (timeoutRef) {
-                    clearTimeout(timeoutRef);
-                }
-
-                timeoutRef = setTimeout(function() {
-                    timeoutRef = null;
-                    cb();
-                }, delay);
-            };
-
-            return { run: throttled,
-                     cancel: function() { clearTimeout(timeoutRef) } };
-        };
     };
 };
 
@@ -43038,14 +43235,12 @@ exports.setDebugDivPoint = function(p) {
     };
 };
 
-},{}],299:[function(require,module,exports){
-// Generated by purs version 0.12.0
+},{}],301:[function(require,module,exports){
 "use strict";
 var $foreign = require("./foreign.js");
 var Control_Applicative = require("../Control.Applicative/index.js");
 var Control_Apply = require("../Control.Apply/index.js");
 var Control_Bind = require("../Control.Bind/index.js");
-var Control_Category = require("../Control.Category/index.js");
 var Control_Monad_Error_Class = require("../Control.Monad.Error.Class/index.js");
 var Control_Semigroupoid = require("../Control.Semigroupoid/index.js");
 var Data_Array = require("../Data.Array/index.js");
@@ -43064,7 +43259,6 @@ var Data_Lens = require("../Data.Lens/index.js");
 var Data_Lens_Getter = require("../Data.Lens.Getter/index.js");
 var Data_Lens_Internal_Forget = require("../Data.Lens.Internal.Forget/index.js");
 var Data_Lens_Iso_Newtype = require("../Data.Lens.Iso.Newtype/index.js");
-var Data_List = require("../Data.List/index.js");
 var Data_List_Types = require("../Data.List.Types/index.js");
 var Data_Map = require("../Data.Map/index.js");
 var Data_Map_Internal = require("../Data.Map.Internal/index.js");
@@ -43099,6 +43293,7 @@ var Genetics_Browser_Demo = require("../Genetics.Browser.Demo/index.js");
 var Genetics_Browser_Layer = require("../Genetics.Browser.Layer/index.js");
 var Genetics_Browser_Track = require("../Genetics.Browser.Track/index.js");
 var Genetics_Browser_Types = require("../Genetics.Browser.Types/index.js");
+var Genetics_Browser_UI_View = require("../Genetics.Browser.UI.View/index.js");
 var Global_Unsafe = require("../Global.Unsafe/index.js");
 var Graphics_Canvas = require("../Graphics.Canvas/index.js");
 var Graphics_Drawing = require("../Graphics.Drawing/index.js");
@@ -43118,33 +43313,6 @@ var Web_HTML = require("../Web.HTML/index.js");
 var Web_HTML_HTMLDocument = require("../Web.HTML.HTMLDocument/index.js");
 var Web_HTML_Window = require("../Web.HTML.Window/index.js");
 var Web_UIEvent_KeyboardEvent = require("../Web.UIEvent.KeyboardEvent/index.js");
-var ScrollView = (function () {
-    function ScrollView(value0) {
-        this.value0 = value0;
-    };
-    ScrollView.create = function (value0) {
-        return new ScrollView(value0);
-    };
-    return ScrollView;
-})();
-var ZoomView = (function () {
-    function ZoomView(value0) {
-        this.value0 = value0;
-    };
-    ZoomView.create = function (value0) {
-        return new ZoomView(value0);
-    };
-    return ZoomView;
-})();
-var ModView = (function () {
-    function ModView(value0) {
-        this.value0 = value0;
-    };
-    ModView.create = function (value0) {
-        return new ModView(value0);
-    };
-    return ModView;
-})();
 var IBoxShow = (function () {
     function IBoxShow() {
 
@@ -43191,24 +43359,6 @@ var wrapWith = function (tag) {
         return "<" + (tag + (">" + (x + ("</" + (tag + ">")))));
     };
 };
-var updateViewFold = function (uv) {
-    return Data_Newtype.over(Genetics_Browser_Coordinates.coordsysviewNewtype)(Genetics_Browser_Coordinates.coordsysviewNewtype)(Genetics_Browser_Coordinates.CoordSysView)((function () {
-        if (uv instanceof ZoomView) {
-            return function (v) {
-                return Genetics_Browser_Coordinates.scalePairBy(v)(uv.value0);
-            };
-        };
-        if (uv instanceof ScrollView) {
-            return function (v) {
-                return Genetics_Browser_Coordinates.translatePairBy(v)(uv.value0);
-            };
-        };
-        if (uv instanceof ModView) {
-            return uv.value0;
-        };
-        throw new Error("Failed pattern match at Genetics.Browser.UI line 196, column 39 - line 199, column 20: " + [ uv.constructor.name ]);
-    })());
-};
 var updateInfoBox = function (el) {
     return function (cmd) {
         if (cmd instanceof IBoxShow) {
@@ -43226,35 +43376,15 @@ var updateInfoBox = function (el) {
         if (cmd instanceof IBoxSetContents) {
             return $foreign.setElementContents(el)(cmd.value0);
         };
-        throw new Error("Failed pattern match at Genetics.Browser.UI line 415, column 3 - line 425, column 33: " + [ cmd.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.UI line 408, column 3 - line 418, column 33: " + [ cmd.constructor.name ]);
     };
 };
 var snpHTML = function (v) {
-    var contents = Data_Foldable.foldMap(Data_Foldable.foldableArray)(Data_Monoid.monoidString)(wrapWith("p"))([ "SNP: " + v.feature.name, "Chr: " + Data_Show.show(Genetics_Browser_Types.showChrId)(v.feature.chrId), "Pos: " + Data_Show.show(Genetics_Browser_Types.showBp)(Data_Pair.fst(v.position)), "-log10: " + Data_Lens_Getter.viewOn(v.feature.score)(function ($224) {
-        return Genetics_Browser_Types._NegLog10(Data_Lens_Internal_Forget.profunctorForget)(Data_Lens_Iso_Newtype._Newtype(Genetics_Browser_Types.newtypeNegLog10)(Genetics_Browser_Types.newtypeNegLog10)(Data_Lens_Internal_Forget.profunctorForget)(Genetics_Browser_Types._prec(4)($224)));
+    var contents = Data_Foldable.foldMap(Data_Foldable.foldableArray)(Data_Monoid.monoidString)(wrapWith("p"))([ "SNP: " + v.feature.name, "Chr: " + Data_Show.show(Genetics_Browser_Types.showChrId)(v.feature.chrId), "Pos: " + Data_Show.show(Genetics_Browser_Types.showBp)(Data_Pair.fst(v.position)), "-log10: " + Data_Lens_Getter.viewOn(v.feature.score)(function ($229) {
+        return Genetics_Browser_Types._NegLog10(Data_Lens_Internal_Forget.profunctorForget)(Data_Lens_Iso_Newtype._Newtype(Genetics_Browser_Types.newtypeNegLog10)(Genetics_Browser_Types.newtypeNegLog10)(Data_Lens_Internal_Forget.profunctorForget)(Genetics_Browser_Types._prec(4)($229)));
     }) ]);
     return wrapWith("div")(contents);
 };
-var showUpdateView = new Data_Show.Show(function (v) {
-    if (v instanceof ScrollView) {
-        return "(Scroll by " + (Data_Show.show(Data_Show.showNumber)(v.value0) + ")");
-    };
-    if (v instanceof ZoomView) {
-        return "(Zoom by " + (Data_Show.show(Data_Show.showNumber)(v.value0) + ")");
-    };
-    return "(ModView)";
-});
-var semigroupUpdateView = new Data_Semigroup.Semigroup(function (v) {
-    return function (v1) {
-        if (v instanceof ScrollView && v1 instanceof ScrollView) {
-            return new ScrollView(v.value0 + v1.value0);
-        };
-        if (v instanceof ZoomView && v1 instanceof ZoomView) {
-            return new ZoomView(v.value0 * v1.value0);
-        };
-        return v1;
-    };
-});
 var queueCmd = function (av) {
     return function (cmd) {
         return Effect_Aff.launchAff_(Effect_Aff_AVar.put(cmd)(av));
@@ -43264,8 +43394,8 @@ var printSNPInfo = function (fs) {
     var n = Data_Foldable.length(Data_Foldable.foldableArray)(Data_Semiring.semiringInt)(fs);
     return function __do() {
         Effect_Class_Console.log(Effect_Class.monadEffectEffect)("showing " + (Data_Show.show(Data_Show.showInt)(5) + (" out of " + (Data_Show.show(Data_Show.showInt)(n) + " clicked glyphs"))))();
-        return Data_Foldable.for_(Effect.applicativeEffect)(Data_Foldable.foldableArray)(Data_Array.take(5)(fs))(function ($225) {
-            return Effect_Class_Console.log(Effect_Class.monadEffectEffect)($225);
+        return Data_Foldable.for_(Effect.applicativeEffect)(Data_Foldable.foldableArray)(Data_Array.take(5)(fs))(function ($230) {
+            return Effect_Class_Console.log(Effect_Class.monadEffectEffect)($230);
         })();
     };
 };
@@ -43281,25 +43411,22 @@ var peakHTML = function (disp) {
         if (v instanceof Data_Maybe.Just) {
             return wrapWith("div")(wrapWith("p")(Data_Show.show(Data_Show.showInt)(Data_Foldable.length(Data_Foldable.foldableArray)(Data_Semiring.semiringInt)(v.value0.tail) + 1 | 0) + " annotations"));
         };
-        throw new Error("Failed pattern match at Genetics.Browser.UI line 327, column 3 - line 335, column 1: " + [ v.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.UI line 320, column 3 - line 328, column 1: " + [ v.constructor.name ]);
     };
 };
-var mouseChrSizes = Data_Functor.map(Data_Functor.functorArray)(Data_Bifunctor.bimap(Data_Tuple.bifunctorTuple)(Genetics_Browser_Types.ChrId)(function ($226) {
-    return Data_Maybe.fromJust()(Data_BigInt.fromString($226));
+var mouseChrSizes = Data_Functor.map(Data_Functor.functorArray)(Data_Bifunctor.bimap(Data_Tuple.bifunctorTuple)(Genetics_Browser_Types.ChrId)(function ($231) {
+    return Data_Maybe.fromJust()(Data_BigInt.fromString($231));
 }))([ new Data_Tuple.Tuple("1", "195471971"), new Data_Tuple.Tuple("2", "182113224"), new Data_Tuple.Tuple("3", "160039680"), new Data_Tuple.Tuple("4", "156508116"), new Data_Tuple.Tuple("5", "151834684"), new Data_Tuple.Tuple("6", "149736546"), new Data_Tuple.Tuple("7", "145441459"), new Data_Tuple.Tuple("8", "129401213"), new Data_Tuple.Tuple("9", "124595110"), new Data_Tuple.Tuple("10", "130694993"), new Data_Tuple.Tuple("11", "122082543"), new Data_Tuple.Tuple("12", "120129022"), new Data_Tuple.Tuple("13", "120421639"), new Data_Tuple.Tuple("14", "124902244"), new Data_Tuple.Tuple("15", "104043685"), new Data_Tuple.Tuple("16", "98207768"), new Data_Tuple.Tuple("17", "94987271"), new Data_Tuple.Tuple("18", "90702639"), new Data_Tuple.Tuple("19", "61431566") ]);
-var monoidUpdateView = new Data_Monoid.Monoid(function () {
-    return semigroupUpdateView;
-}, new ModView(Control_Category.identity(Control_Category.categoryFn)));
 var keyUI = function (el) {
     return function (mods) {
         return function (cb) {
             var f = function (ke) {
                 var v = Web_UIEvent_KeyboardEvent.key(ke);
                 if (v === "ArrowLeft") {
-                    return cb(new ScrollView(-mods.scrollMod));
+                    return cb(new Genetics_Browser_UI_View.ScrollView(-mods.scrollMod));
                 };
                 if (v === "ArrowRight") {
-                    return cb(new ScrollView(mods.scrollMod));
+                    return cb(new Genetics_Browser_UI_View.ScrollView(mods.scrollMod));
                 };
                 return Control_Applicative.pure(Effect.applicativeEffect)(Data_Unit.unit);
             };
@@ -43320,7 +43447,7 @@ var initInfoBox = function __do() {
         if (v2 instanceof Data_Maybe.Just) {
             return Data_Functor["void"](Effect.functorEffect)(Web_DOM_Node.appendChild(Web_DOM_Element.toNode(v1))(Web_DOM_Element.toNode(v2.value0)))();
         };
-        throw new Error("Failed pattern match at Genetics.Browser.UI line 438, column 31 - line 440, column 84: " + [ v2.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.UI line 431, column 31 - line 433, column 84: " + [ v2.constructor.name ]);
     })();
     return updateInfoBox(v1);
 };
@@ -43340,7 +43467,7 @@ var genericInfoBoxF = new Data_Generic_Rep.Generic(function (x) {
     if (x instanceof IBoxSetContents) {
         return new Data_Generic_Rep.Inr(new Data_Generic_Rep.Inr(new Data_Generic_Rep.Inr(new Data_Generic_Rep.Inr(x.value0))));
     };
-    throw new Error("Failed pattern match at Genetics.Browser.UI line 408, column 8 - line 408, column 54: " + [ x.constructor.name ]);
+    throw new Error("Failed pattern match at Genetics.Browser.UI line 401, column 8 - line 401, column 54: " + [ x.constructor.name ]);
 }, function (x) {
     if (x instanceof Data_Generic_Rep.Inl) {
         return IBoxShow.value;
@@ -43357,7 +43484,7 @@ var genericInfoBoxF = new Data_Generic_Rep.Generic(function (x) {
     if (x instanceof Data_Generic_Rep.Inr && (x.value0 instanceof Data_Generic_Rep.Inr && (x.value0.value0 instanceof Data_Generic_Rep.Inr && x.value0.value0.value0 instanceof Data_Generic_Rep.Inr))) {
         return new IBoxSetContents(x.value0.value0.value0.value0);
     };
-    throw new Error("Failed pattern match at Genetics.Browser.UI line 408, column 8 - line 408, column 54: " + [ x.constructor.name ]);
+    throw new Error("Failed pattern match at Genetics.Browser.UI line 401, column 8 - line 401, column 54: " + [ x.constructor.name ]);
 });
 var showInfoBoxF = new Data_Show.Show(Data_Generic_Rep_Show.genericShow(genericInfoBoxF)(Data_Generic_Rep_Show.genericShowSum(Data_Generic_Rep_Show.genericShowConstructor(Data_Generic_Rep_Show.genericShowArgsNoArguments)(new Data_Symbol.IsSymbol(function () {
     return "IBoxShow";
@@ -43385,8 +43512,8 @@ var debugView = function (s) {
         }));
     };
     var set = function (lr) {
-        return s.queueUpdateView(ModView.create(Data_Function["const"](Data_Functor.map(Data_Pair.functorPair)(function ($227) {
-            return Data_Maybe.fromJust()(Data_BigInt.fromNumber($227));
+        return s.queueUpdateView(Genetics_Browser_UI_View.ModView.create(Data_Function["const"](Data_Functor.map(Data_Pair.functorPair)(function ($232) {
+            return Data_Maybe.fromJust()(Data_BigInt.fromNumber($232));
         })(new Data_Pair.Pair(lr.l, lr.r)))));
     };
     return Control_Applicative.pure(Effect.applicativeEffect)({
@@ -43397,10 +43524,10 @@ var debugView = function (s) {
 var btnUI = function (mods) {
     return function (cb) {
         return function __do() {
-            $foreign.buttonEvent("scrollLeft")(cb(new ScrollView(-mods.scrollMod)))();
-            $foreign.buttonEvent("scrollRight")(cb(new ScrollView(mods.scrollMod)))();
-            $foreign.buttonEvent("zoomOut")(cb(ZoomView.create(1.0 + mods.zoomMod)))();
-            return $foreign.buttonEvent("zoomIn")(cb(ZoomView.create(1.0 - mods.zoomMod)))();
+            $foreign.buttonEvent("scrollLeft")(cb(new Genetics_Browser_UI_View.ScrollView(-mods.scrollMod)))();
+            $foreign.buttonEvent("scrollRight")(cb(new Genetics_Browser_UI_View.ScrollView(mods.scrollMod)))();
+            $foreign.buttonEvent("zoomOut")(cb(Genetics_Browser_UI_View.ZoomView.create(1.0 + mods.zoomMod)))();
+            return $foreign.buttonEvent("zoomIn")(cb(Genetics_Browser_UI_View.ZoomView.create(1.0 - mods.zoomMod)))();
         };
     };
 };
@@ -43416,10 +43543,14 @@ var annotationHTMLShort = function (v) {
         if (v.feature.url instanceof Data_Maybe.Just) {
             return "<a target='_blank' href='" + (v.feature.url.value0 + ("'>" + (name$prime + "</a>")));
         };
-        throw new Error("Failed pattern match at Genetics.Browser.UI line 388, column 18 - line 394, column 1: " + [ v.feature.url.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.UI line 381, column 18 - line 387, column 1: " + [ v.feature.url.constructor.name ]);
     })();
     return wrapWith("p")(anchor);
 };
+
+// | Given a function to transform the data in the annotation's "rest" field
+// | to text (or Nothing if the field should not be displayed), produce a
+// | function that generates HTML from annotations
 var annotationHTML = function (disp) {
     return function (v) {
         var url = Data_Maybe.fromMaybe("No URL")(Data_Functor.map(Data_Maybe.functorMaybe)(function (a) {
@@ -43435,14 +43566,16 @@ var annotationHTML = function (disp) {
         return wrapWith("div")(contents);
     };
 };
-var annotationHTMLAll = annotationHTML(function ($228) {
-    return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(Genetics_Browser_Demo.showAnnotationField($228));
+
+// | Shows all data in "rest" using the default showAnnotationField (which uses unsafeCoerce)
+var annotationHTMLAll = annotationHTML(function ($233) {
+    return Control_Applicative.pure(Data_Maybe.applicativeMaybe)(Genetics_Browser_Demo.showAnnotationField($233));
 });
 var annotationHTMLDefault = annotationHTML(function (x) {
     return Control_Applicative.pure(Data_Maybe.applicativeMaybe)((function () {
         if (x.field === "p_lrt") {
-            return "p_lrt: " + Data_Lens_Getter.viewOn(x.value)(function ($229) {
-                return Genetics_Browser_Types._NegLog10(Data_Lens_Internal_Forget.profunctorForget)(Data_Lens_Iso_Newtype._Newtype(Genetics_Browser_Types.newtypeNegLog10)(Genetics_Browser_Types.newtypeNegLog10)(Data_Lens_Internal_Forget.profunctorForget)(Genetics_Browser_Types._prec(4)($229)));
+            return "p_lrt: " + Data_Lens_Getter.viewOn(x.value)(function ($234) {
+                return Genetics_Browser_Types._NegLog10(Data_Lens_Internal_Forget.profunctorForget)(Data_Lens_Iso_Newtype._Newtype(Genetics_Browser_Types.newtypeNegLog10)(Genetics_Browser_Types.newtypeNegLog10)(Data_Lens_Internal_Forget.profunctorForget)(Genetics_Browser_Types._prec(4)($234)));
             });
         };
         return Genetics_Browser_Demo.showAnnotationField(x);
@@ -43459,58 +43592,114 @@ var annoPeakHTML = function (peak) {
     if (v instanceof Data_Maybe.Just) {
         return wrapWith("div")(wrapWith("p")("Annotations:") + Data_Foldable.foldMap(Data_Foldable.foldableArray)(Data_Monoid.monoidString)(annotationHTMLShort)(peak.elements));
     };
-    throw new Error("Failed pattern match at Genetics.Browser.UI line 339, column 3 - line 344, column 75: " + [ v.constructor.name ]);
-};
-var animateDelta = function (dictMonoid) {
-    return function (update) {
-        return function (done) {
-            return function (refs) {
-                return function (timeout) {
-                    return function __do() {
-                        var v = $foreign.onTimeout(timeout)(function __do() {
-                            var v = Effect_Ref.read(refs.velocity)();
-                            Effect_Ref.write(Data_Monoid.mempty(dictMonoid))(refs.velocity)();
-                            return Effect_Aff.launchAff_(Effect_Class.liftEffect(Effect_Aff.monadEffectAff)(Control_Bind.bind(Effect.bindEffect)(Effect_Ref.modify(update(v))(refs.current))(done)))();
-                        })();
-                        return function (cmd) {
-                            return function __do() {
-                                Effect_Ref.modify_(function (v1) {
-                                    return Data_Semigroup.append(dictMonoid.Semigroup0())(v1)(cmd);
-                                })(refs.velocity)();
-                                return v.run();
-                            };
-                        };
-                    };
-                };
-            };
-        };
-    };
+    throw new Error("Failed pattern match at Genetics.Browser.UI line 332, column 3 - line 337, column 75: " + [ v.constructor.name ]);
 };
 var _render = Data_Symbol.SProxy.value;
 var uiViewUpdate = function (cs) {
-    return function (timeout) {
-        return function (v) {
-            var update = function (vD) {
-                return function ($230) {
-                    return Genetics_Browser_Coordinates.normalizeView(cs)(Data_BigInt.fromInt(200000))(updateViewFold(vD)($230));
+    return function (v) {
+        return function (timeout) {
+            return function (v1) {
+                return function __do() {
+                    var v2 = Effect_Ref.read(v1.view)();
+                    var v3 = Data_Functor.map(Effect.functorEffect)(function ($235) {
+                        return (function (v3) {
+                            return v3.center;
+                        })(Genetics_Browser_Layer.trackSlots($235));
+                    })(Genetics_Browser_Canvas.getDimensions(Effect_Class.monadEffectEffect)(v.trackContainer))();
+                    var toZoomRange = function (v4) {
+                        return function (x) {
+                            var dx = (x - 1.0) / 2.0;
+                            var l$prime = (function () {
+                                var $148 = Data_Ord.lessThanOrEq(Data_BigInt.ordBigInt)(v4.value0)(Data_Semiring.zero(Data_BigInt.semiringBigInt));
+                                if ($148) {
+                                    return 0.0;
+                                };
+                                return -dx;
+                            })();
+                            var r$prime = (function () {
+                                var $149 = Data_Ord.greaterThanOrEq(Data_BigInt.ordBigInt)(v4.value1)(Data_Lens_Getter.viewOn(cs)(Genetics_Browser_Coordinates._TotalSize(Data_BigInt.ringBigInt)));
+                                if ($149) {
+                                    return 1.0;
+                                };
+                                return 1.0 + dx;
+                            })();
+                            return new Data_Pair.Pair(l$prime, r$prime);
+                        };
+                    };
+                    var timeouts = {
+                        step: Data_Newtype.wrap(Data_Time_Duration.newtypeMilliseconds)(10.0),
+                        done: Data_Newtype.wrap(Data_Time_Duration.newtypeMilliseconds)(200.0)
+                    };
+                    var step = function (uv) {
+                        return function ($236) {
+                            return Genetics_Browser_Coordinates.normalizeView(cs)(Data_BigInt.fromInt(200000))(Genetics_Browser_UI_View.updateViewFold(uv)($236));
+                        };
+                    };
+                    var pixelClamps = function (v4) {
+                        var vs = Genetics_Browser_Coordinates.viewScale(v3.size)(v4);
+                        var right = Genetics_Browser_Coordinates.scaleToScreen(vs)(Data_Ring.sub(Data_BigInt.ringBigInt)(Data_Lens_Getter.viewOn(cs)(Genetics_Browser_Coordinates._TotalSize(Data_BigInt.ringBigInt)))(v4.value1));
+                        var left = Genetics_Browser_Coordinates.scaleToScreen(vs)(v4.value0);
+                        return {
+                            left: left,
+                            right: right
+                        };
+                    };
+                    var toPixels = function (csv) {
+                        return function (x) {
+                            var v4 = pixelClamps(csv);
+                            var x$prime = v3.size.width * x;
+                            var $156 = x$prime < 0;
+                            if ($156) {
+                                return Data_Ord.max(Data_Ord.ordNumber)(-v4.left)(x$prime);
+                            };
+                            return Data_Ord.min(Data_Ord.ordNumber)(v4.right)(x$prime);
+                        };
+                    };
+                    var initial = {
+                        position: v2,
+                        velocity: Data_Monoid.mempty(Genetics_Browser_UI_View.monoidUpdateView)
+                    };
+                    var callback = function (v4) {
+                        if (v4 instanceof Data_Either.Right) {
+                            return Genetics_Browser_Canvas.animateTrack(v.trackContainer)(v4.value0);
+                        };
+                        if (v4 instanceof Data_Either.Left) {
+                            return function __do() {
+                                Effect_Ref.write(v4.value0)(v1.view)();
+                                return Effect_Aff.launchAff_(Effect_Aff_AVar.put(Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
+                                    return "render";
+                                }))(_render)(Data_Unit.unit))(v1.uiCmd))();
+                            };
+                        };
+                        throw new Error("Failed pattern match at Genetics.Browser.UI line 225, column 18 - line 229, column 57: " + [ v4.constructor.name ]);
+                    };
+                    var animate = function (uv) {
+                        return function (csv) {
+                            if (uv instanceof Genetics_Browser_UI_View.ScrollView) {
+                                return new Genetics_Browser_UI_View.Scrolling(toPixels(csv)(uv.value0));
+                            };
+                            if (uv instanceof Genetics_Browser_UI_View.ZoomView) {
+                                return new Genetics_Browser_UI_View.Zooming(toZoomRange(csv)(uv.value0));
+                            };
+                            if (uv instanceof Genetics_Browser_UI_View.ModView) {
+                                return Genetics_Browser_UI_View.Jump.value;
+                            };
+                            throw new Error("Failed pattern match at Genetics.Browser.UI line 218, column 24 - line 221, column 29: " + [ uv.constructor.name ]);
+                        };
+                    };
+                    return Genetics_Browser_UI_View.animateDelta(Genetics_Browser_UI_View.monoidUpdateView)({
+                        step: step,
+                        animate: animate
+                    })(callback)(initial)(timeouts)();
                 };
-            };
-            var done = function (v1) {
-                return Effect_Aff.launchAff_(Effect_Aff_AVar.put(Data_Variant.inj()(new Data_Symbol.IsSymbol(function () {
-                    return "render";
-                }))(_render)(Data_Unit.unit))(v.uiCmd));
-            };
-            return function __do() {
-                var v1 = Effect_Ref["new"](Data_Monoid.mempty(monoidUpdateView))();
-                return animateDelta(monoidUpdateView)(update)(done)({
-                    current: v.view,
-                    velocity: v1
-                })(timeout)();
             };
         };
     };
 };
 var _docResize = Data_Symbol.SProxy.value;
+
+// | Creates the track using the provided initial data, returning
+// | a TrackInterface for reading state & sending commands to it
 var initializeTrack = function (dictRowToList) {
     return function (dictTrackRecord) {
         return function (cSys) {
@@ -43525,7 +43714,9 @@ var initializeTrack = function (dictRowToList) {
                                             return Control_Bind.bind(Effect_Aff.bindAff)(Genetics_Browser_Track.makeTrack(dictRowToList)(dictTrackRecord)(renderFuns)(bc))(function (v5) {
                                                 var queueCommand = Data_Function.flip(Effect_Aff_AVar.put)(v3);
                                                 var getView = Effect_Ref.read(v1);
-                                                return Control_Bind.bind(Effect_Aff.bindAff)(Effect_Class.liftEffect(Effect_Aff.monadEffectAff)(uiViewUpdate(cSys)(Data_Newtype.wrap(Data_Time_Duration.newtypeMilliseconds)(30.0))({
+                                                return Control_Bind.bind(Effect_Aff.bindAff)(Effect_Class.liftEffect(Effect_Aff.monadEffectAff)(uiViewUpdate(cSys)({
+                                                    trackContainer: bc
+                                                })(Data_Newtype.wrap(Data_Time_Duration.newtypeMilliseconds)(30.0))({
                                                     view: v1,
                                                     uiCmd: v3
                                                 })))(function (v6) {
@@ -43625,7 +43816,7 @@ var runBrowser = function (config) {
                                     return track.queueUpdateView(u);
                                 })();
                                 $foreign.buttonEvent("reset")((function () {
-                                    var cmd = new ModView(Data_Function["const"](Data_Newtype.unwrap(Genetics_Browser_Coordinates.coordsysviewNewtype)(initialView)));
+                                    var cmd = new Genetics_Browser_UI_View.ModView(Data_Function["const"](Data_Newtype.unwrap(Genetics_Browser_Coordinates.coordsysviewNewtype)(initialView)));
                                     return track.queueUpdateView(cmd);
                                 })())();
                                 keyUI(Data_Lens_Getter.viewOn(bc)(Genetics_Browser_Canvas._Container(Genetics_Browser_Canvas.newtypeBrowserContainer)(Data_Lens_Internal_Forget.strongForget)))({
@@ -43635,17 +43826,17 @@ var runBrowser = function (config) {
                                 })();
                                 Genetics_Browser_Canvas.dragScroll(bc)(function (v1) {
                                     return Control_Applicative.when(Effect.applicativeEffect)($$Math.abs(v1.x) >= 1)(function __do() {
-                                        var v2 = Data_Functor.map(Effect.functorEffect)(function ($231) {
+                                        var v2 = Data_Functor.map(Effect.functorEffect)(function ($237) {
                                             return (function (v2) {
                                                 return v2.center;
-                                            })(Genetics_Browser_Layer.trackSlots($231));
+                                            })(Genetics_Browser_Layer.trackSlots($237));
                                         })(Genetics_Browser_Canvas.getDimensions(Effect_Class.monadEffectEffect)(tc))();
-                                        var cmd = ScrollView.create(-v1.x / v2.size.width);
+                                        var cmd = Genetics_Browser_UI_View.ScrollView.create(v1.x / v2.size.width);
                                         return track.queueUpdateView(cmd)();
                                     });
                                 })();
                                 return Genetics_Browser_Canvas.wheelZoom(Genetics_Browser_Canvas.newtypeBrowserContainer)(bc)(function (dY) {
-                                    var cmd = ZoomView.create(1.0 + 6.0e-2 * dY);
+                                    var cmd = Genetics_Browser_UI_View.ZoomView.create(1.0 + 6.0e-2 * dY);
                                     return track.queueUpdateView(cmd);
                                 })();
                             });
@@ -43693,10 +43884,10 @@ var runBrowser = function (config) {
                                             };
                                             var glyphClick = function (p) {
                                                 return Effect_Aff.launchAff_(Control_Bind.bind(Effect_Aff.bindAff)(Effect_Class.liftEffect(Effect_Aff.monadEffectAff)(v4.getView))(function (v5) {
-                                                    return Control_Bind.bind(Effect_Aff.bindAff)(Data_Functor.map(Effect_Aff.functorAff)(function ($232) {
+                                                    return Control_Bind.bind(Effect_Aff.bindAff)(Data_Functor.map(Effect_Aff.functorAff)(function ($238) {
                                                         return (function (v7) {
                                                             return v7.center;
-                                                        })(Genetics_Browser_Layer.trackSlots($232));
+                                                        })(Genetics_Browser_Layer.trackSlots($238));
                                                     })(Genetics_Browser_Canvas.getDimensions(Effect_Aff.monadEffectAff)(v1)))(function (v7) {
                                                         var segs = Genetics_Browser.pixelSegments({
                                                             segmentPadding: 12.0
@@ -43717,7 +43908,7 @@ var runBrowser = function (config) {
                                                                         return v(IBoxSetContents.create(snpHTML(v9.value0) + Data_Foldable.foldMap(Data_Foldable.foldableMaybe)(Data_Monoid.monoidString)(annoPeakHTML)(annotAround(annoPeaks)(v9.value0))))();
                                                                     };
                                                                 };
-                                                                throw new Error("Failed pattern match at Genetics.Browser.UI line 538, column 15 - line 546, column 70: " + [ v9.constructor.name ]);
+                                                                throw new Error("Failed pattern match at Genetics.Browser.UI line 531, column 15 - line 539, column 70: " + [ v9.constructor.name ]);
                                                             })());
                                                         });
                                                     });
@@ -43744,7 +43935,7 @@ var runBrowser = function (config) {
                                         });
                                     });
                                 };
-                                throw new Error("Failed pattern match at Genetics.Browser.UI line 557, column 42 - line 563, column 17: " + [ config.urls.genes.constructor.name ]);
+                                throw new Error("Failed pattern match at Genetics.Browser.UI line 551, column 42 - line 557, column 17: " + [ config.urls.genes.constructor.name ]);
                             })()))(function (v3) {
                                 return Control_Bind.bind(Effect_Aff.bindAff)(Control_Bind.bind(Effect_Aff.bindAff)(Genetics_Browser_Demo.addChrLayers({
                                     coordinateSystem: cSys,
@@ -43763,7 +43954,9 @@ var runBrowser = function (config) {
                                     }))()()(Genetics_Browser_Track.trackRecordRender(new Data_Symbol.IsSymbol(function () {
                                         return "genes";
                                     }))()()(Genetics_Browser_Track.trackRecordNil(Type_Equality.refl))))(cSys)(v4)(initialView)(v2))(function (v5) {
-                                        return setHandlers(v2)(v5);
+                                        return Control_Bind.discard(Control_Bind.discardUnit)(Effect_Aff.bindAff)(setHandlers(v2)(v5))(function () {
+                                            return Control_Applicative.pure(Effect_Aff.applicativeAff)(Data_Unit.unit);
+                                        });
                                     });
                                 });
                             });
@@ -43908,8 +44101,8 @@ var main = function (rawConfig) {
                 return "snps";
             }))(Simple_JSON.readMaybe(Simple_JSON.readString))(Simple_JSON.readFieldsNil)()())()())()()))(Simple_JSON.readFieldsNil)()())()())()())()())()()))(rawConfig);
             if (v1 instanceof Data_Either.Left) {
-                return $foreign.setElementContents(v.value0)("<p>Error when parsing provided config object:<p>" + Data_Foldable.foldMap(Data_List_Types.foldableNonEmptyList)(Data_Monoid.monoidString)(function ($233) {
-                    return wrapWith("p")(Foreign.renderForeignError($233));
+                return $foreign.setElementContents(v.value0)("<p>Error when parsing provided config object:<p>" + Data_Foldable.foldMap(Data_List_Types.foldableNonEmptyList)(Data_Monoid.monoidString)(function ($239) {
+                    return wrapWith("p")(Foreign.renderForeignError($239));
                 })(v1.value0))();
             };
             if (v1 instanceof Data_Either.Right) {
@@ -43925,19 +44118,14 @@ var main = function (rawConfig) {
                 Effect_Class_Console.log(Effect_Class.monadEffectEffect)(Global_Unsafe.unsafeStringify(v1.value0))();
                 return Data_Functor["void"](Effect.functorEffect)(runBrowser(v1.value0)(v4))();
             };
-            throw new Error("Failed pattern match at Genetics.Browser.UI line 612, column 7 - line 630, column 33: " + [ v1.constructor.name ]);
+            throw new Error("Failed pattern match at Genetics.Browser.UI line 608, column 7 - line 626, column 33: " + [ v1.constructor.name ]);
         };
-        throw new Error("Failed pattern match at Genetics.Browser.UI line 608, column 3 - line 630, column 33: " + [ v.constructor.name ]);
+        throw new Error("Failed pattern match at Genetics.Browser.UI line 604, column 3 - line 626, column 33: " + [ v.constructor.name ]);
     };
 };
 module.exports = {
     initializeTrack: initializeTrack,
-    ScrollView: ScrollView,
-    ZoomView: ZoomView,
-    ModView: ModView,
-    updateViewFold: updateViewFold,
     queueCmd: queueCmd,
-    animateDelta: animateDelta,
     uiViewUpdate: uiViewUpdate,
     btnUI: btnUI,
     keyUI: keyUI,
@@ -43964,16 +44152,12 @@ module.exports = {
     runBrowser: runBrowser,
     main: main,
     mouseChrSizes: mouseChrSizes,
-    showUpdateView: showUpdateView,
-    semigroupUpdateView: semigroupUpdateView,
-    monoidUpdateView: monoidUpdateView,
     genericInfoBoxF: genericInfoBoxF,
     showInfoBoxF: showInfoBoxF,
     windowInnerSize: $foreign.windowInnerSize,
     buttonEvent: $foreign.buttonEvent,
     keydownEvent: $foreign.keydownEvent,
     resizeEvent: $foreign.resizeEvent,
-    onTimeout: $foreign.onTimeout,
     initDebugDiv: $foreign.initDebugDiv,
     setDebugDivVisibility: $foreign.setDebugDivVisibility,
     setDebugDivPoint: $foreign.setDebugDivPoint,
@@ -43981,57 +44165,7 @@ module.exports = {
     setWindow: $foreign.setWindow
 };
 
-},{"../Control.Applicative/index.js":9,"../Control.Apply/index.js":11,"../Control.Bind/index.js":15,"../Control.Category/index.js":16,"../Control.Monad.Error.Class/index.js":23,"../Control.Semigroupoid/index.js":51,"../Data.Array/index.js":63,"../Data.Bifunctor/index.js":71,"../Data.BigInt/index.js":73,"../Data.Either/index.js":91,"../Data.EuclideanRing/index.js":97,"../Data.Filterable/index.js":99,"../Data.Foldable/index.js":101,"../Data.Function/index.js":106,"../Data.Functor/index.js":112,"../Data.Generic.Rep.Show/index.js":115,"../Data.Generic.Rep/index.js":116,"../Data.Int/index.js":124,"../Data.Lens.Getter/index.js":131,"../Data.Lens.Internal.Forget/index.js":136,"../Data.Lens.Iso.Newtype/index.js":145,"../Data.Lens/index.js":157,"../Data.List.Types/index.js":161,"../Data.List/index.js":162,"../Data.Map.Internal/index.js":163,"../Data.Map/index.js":164,"../Data.Maybe/index.js":167,"../Data.Monoid/index.js":176,"../Data.Newtype/index.js":178,"../Data.Ord/index.js":189,"../Data.Pair/index.js":191,"../Data.Ring/index.js":201,"../Data.Semigroup/index.js":207,"../Data.Semiring/index.js":209,"../Data.Show/index.js":212,"../Data.Symbol/index.js":231,"../Data.Time.Duration/index.js":233,"../Data.Traversable/index.js":238,"../Data.Tuple/index.js":240,"../Data.Unit/index.js":246,"../Data.Variant/index.js":249,"../Effect.Aff.AVar/index.js":253,"../Effect.Aff/index.js":257,"../Effect.Class.Console/index.js":258,"../Effect.Class/index.js":259,"../Effect.Exception/index.js":264,"../Effect.Ref/index.js":268,"../Effect/index.js":274,"../Foreign/index.js":288,"../Genetics.Browser.Bed/index.js":289,"../Genetics.Browser.Canvas/index.js":291,"../Genetics.Browser.Coordinates/index.js":292,"../Genetics.Browser.Demo/index.js":293,"../Genetics.Browser.Layer/index.js":295,"../Genetics.Browser.Track/index.js":296,"../Genetics.Browser.Types/index.js":297,"../Genetics.Browser/index.js":302,"../Global.Unsafe/index.js":304,"../Graphics.Canvas/index.js":308,"../Graphics.Drawing/index.js":310,"../Math/index.js":312,"../Partial.Unsafe/index.js":321,"../Prelude/index.js":324,"../Record/index.js":333,"../Simple.JSON/index.js":335,"../Type.Equality/index.js":344,"../Unsafe.Coerce/index.js":349,"../Web.DOM.Document/index.js":358,"../Web.DOM.Element/index.js":363,"../Web.DOM.Node/index.js":368,"../Web.DOM.ParentNode/index.js":377,"../Web.DOM/index.js":382,"../Web.HTML.HTMLDocument/index.js":416,"../Web.HTML.Window/index.js":522,"../Web.HTML/index.js":524,"../Web.UIEvent.KeyboardEvent/index.js":530,"./foreign.js":298}],300:[function(require,module,exports){
-"use strict";
-
-exports.timeImpl = function(l) {
-    var running = true;
-    return function() {
-        console.time(l);
-        return function() {
-            if (running) {
-                console.timeEnd(l);
-                running = false;
-            }
-        };
-    };
-};
-
-exports.timeStart = function() {
-    console.time();
-};
-
-
-exports.timeEnd = function() {
-    console.timeEnd();
-};
-
-},{}],301:[function(require,module,exports){
-// Generated by purs version 0.12.0
-"use strict";
-var $foreign = require("./foreign.js");
-var Control_Applicative = require("../Control.Applicative/index.js");
-var Control_Bind = require("../Control.Bind/index.js");
-var Data_Function = require("../Data.Function/index.js");
-var Effect = require("../Effect/index.js");
-var Effect_Class = require("../Effect.Class/index.js");
-var Prelude = require("../Prelude/index.js");
-var time = function (dictMonadEffect) {
-    return function (s) {
-        return Effect_Class.liftEffect(dictMonadEffect)(function __do() {
-            var v = $foreign.timeImpl(s)();
-            return Effect_Class.liftEffect(dictMonadEffect)(v);
-        });
-    };
-};
-module.exports = {
-    time: time,
-    timeImpl: $foreign.timeImpl,
-    timeStart: $foreign.timeStart,
-    timeEnd: $foreign.timeEnd
-};
-
-},{"../Control.Applicative/index.js":9,"../Control.Bind/index.js":15,"../Data.Function/index.js":106,"../Effect.Class/index.js":259,"../Effect/index.js":274,"../Prelude/index.js":324,"./foreign.js":300}],302:[function(require,module,exports){
+},{"../Control.Applicative/index.js":9,"../Control.Apply/index.js":11,"../Control.Bind/index.js":15,"../Control.Monad.Error.Class/index.js":23,"../Control.Semigroupoid/index.js":51,"../Data.Array/index.js":63,"../Data.Bifunctor/index.js":71,"../Data.BigInt/index.js":73,"../Data.Either/index.js":91,"../Data.EuclideanRing/index.js":97,"../Data.Filterable/index.js":99,"../Data.Foldable/index.js":101,"../Data.Function/index.js":106,"../Data.Functor/index.js":112,"../Data.Generic.Rep.Show/index.js":115,"../Data.Generic.Rep/index.js":116,"../Data.Int/index.js":124,"../Data.Lens.Getter/index.js":131,"../Data.Lens.Internal.Forget/index.js":136,"../Data.Lens.Iso.Newtype/index.js":145,"../Data.Lens/index.js":157,"../Data.List.Types/index.js":161,"../Data.Map.Internal/index.js":163,"../Data.Map/index.js":164,"../Data.Maybe/index.js":167,"../Data.Monoid/index.js":176,"../Data.Newtype/index.js":178,"../Data.Ord/index.js":189,"../Data.Pair/index.js":191,"../Data.Ring/index.js":201,"../Data.Semigroup/index.js":207,"../Data.Semiring/index.js":209,"../Data.Show/index.js":212,"../Data.Symbol/index.js":231,"../Data.Time.Duration/index.js":233,"../Data.Traversable/index.js":238,"../Data.Tuple/index.js":240,"../Data.Unit/index.js":246,"../Data.Variant/index.js":249,"../Effect.Aff.AVar/index.js":253,"../Effect.Aff/index.js":257,"../Effect.Class.Console/index.js":258,"../Effect.Class/index.js":259,"../Effect.Exception/index.js":264,"../Effect.Ref/index.js":268,"../Effect/index.js":274,"../Foreign/index.js":288,"../Genetics.Browser.Bed/index.js":289,"../Genetics.Browser.Canvas/index.js":291,"../Genetics.Browser.Coordinates/index.js":292,"../Genetics.Browser.Demo/index.js":293,"../Genetics.Browser.Layer/index.js":295,"../Genetics.Browser.Track/index.js":296,"../Genetics.Browser.Types/index.js":297,"../Genetics.Browser.UI.View/index.js":299,"../Genetics.Browser/index.js":302,"../Global.Unsafe/index.js":304,"../Graphics.Canvas/index.js":308,"../Graphics.Drawing/index.js":310,"../Math/index.js":312,"../Partial.Unsafe/index.js":321,"../Prelude/index.js":324,"../Record/index.js":333,"../Simple.JSON/index.js":335,"../Type.Equality/index.js":344,"../Unsafe.Coerce/index.js":349,"../Web.DOM.Document/index.js":358,"../Web.DOM.Element/index.js":363,"../Web.DOM.Node/index.js":368,"../Web.DOM.ParentNode/index.js":377,"../Web.DOM/index.js":382,"../Web.HTML.HTMLDocument/index.js":416,"../Web.HTML.Window/index.js":522,"../Web.HTML/index.js":524,"../Web.UIEvent.KeyboardEvent/index.js":530,"./foreign.js":300}],302:[function(require,module,exports){
 // Generated by purs version 0.12.0
 "use strict";
 var Color = require("../Color/index.js");
@@ -63163,5 +63297,5 @@ module.exports = {
     "new": $foreign["new"]
 };
 
-},{"../Data.Eq/index.js":95,"../Data.Maybe/index.js":167,"../Data.Newtype/index.js":178,"../Data.Nullable/index.js":181,"../Data.Ord/index.js":189,"../Effect.Uncurried/index.js":270,"../Effect/index.js":274,"../Prelude/index.js":324,"../Web.File.Blob/index.js":390,"./foreign.js":532}]},{},[299])(299)
+},{"../Data.Eq/index.js":95,"../Data.Maybe/index.js":167,"../Data.Newtype/index.js":178,"../Data.Nullable/index.js":181,"../Data.Ord/index.js":189,"../Effect.Uncurried/index.js":270,"../Effect/index.js":274,"../Prelude/index.js":324,"../Web.File.Blob/index.js":390,"./foreign.js":532}]},{},[301])(301)
 });

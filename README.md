@@ -7,5 +7,4 @@ project.
 ## Genome browser
 [Genome browser demo](./track/index.html)
 
-## Halogen app embedding Biodalliance and Cytoscape.js
-[Halogen app demo](./halogen/index.html)
+[Genome browser demo with multiple tracks](./multiple/index.html)
